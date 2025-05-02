@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.Python
+.env
+.venv/
+venv/
+ENV/
+env/
+*.env
+
+# Django
+*.log
+*.pot
+*.pyc
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+config/settings/local.py
+
+# mypy / Pyright / Pylint
+.mypy_cache/
+.pyright/
+.pytest_cache/
+.pyre/
+.coverage
+
+# VS Code / IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# macOS / Linux / Windows
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Virtualenv / Poetry / Pipenv
+pip-log.txt
+pip-delete-this-directory.txt
+poetry.lock
+Pipfile.lock
+Pipfile
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn.lock
+pnpm-lock.yaml
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+*.manifest
+*.spec
+*.tar.gz
+*.whl
+
+# Docker
+*.pid
+*.tar
+.docker/
+docker-compose.override.yml
+
+# Test
+htmlcov/
+.tox/
+.nox/
+coverage.*
+.cache/
+*.cover
+test-results/
+
+# Logs
+*.log
+logs/
+*.out
+*.err

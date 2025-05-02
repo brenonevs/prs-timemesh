@@ -1,0 +1,48 @@
+# Ignore Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Ignore environment files and secrets
+.env
+*.env
+*.secret
+secrets/
+
+# Ignore OS and editor configs
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Ignore tests and coverage
+tests/
+test/
+.tox/
+.pytest_cache/
+coverage.*
+htmlcov/
+.cache/
+
+# Ignore git and documentation
+.git/
+.gitignore
+README.md
+LICENSE
+*.md
+
+# Ignore local files not needed in image
+*.log
+*.db
+*.sqlite3
+*.ipynb
+*.tar.gz
+*.egg-info/
+node_modules/
+venv/
+.venv/
+ENV/
+env/
+media/
+staticfiles/
