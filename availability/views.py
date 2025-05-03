@@ -19,7 +19,48 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
         return AvailabilitySlot.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        user = self.request.user
+        date = serializer.validated_data['date']
+        start_time = serializer.validated_data['start_time']
+        end_time = serializer.validated_data['end_time']
+
+        # Buscar slots existentes no mesmo dia
+        existing_slots = AvailabilitySlot.objects.filter(
+            user=user,
+            date=date
+        )
+
+        # Verificar sobreposições
+        overlapping_slots = []
+        for slot in existing_slots:
+            if (start_time <= slot.end_time and end_time >= slot.start_time):
+                overlapping_slots.append(slot)
+
+        if overlapping_slots:
+            # Verifica se o novo horário está totalmente contido em todos os slots sobrepostos
+            is_fully_contained = all(
+                slot.start_time <= start_time and slot.end_time >= end_time
+                for slot in overlapping_slots
+            )
+            # Se sim, deleta todos e cria apenas o novo
+            if is_fully_contained:
+                for slot in overlapping_slots:
+                    slot.delete()
+                serializer.save(user=user)
+            else:
+                # Caso contrário, funde normalmente
+                new_start_time = min(start_time, *[slot.start_time for slot in overlapping_slots])
+                new_end_time = max(end_time, *[slot.end_time for slot in overlapping_slots])
+                for slot in overlapping_slots:
+                    slot.delete()
+                serializer.save(
+                    user=user,
+                    start_time=new_start_time,
+                    end_time=new_end_time
+                )
+        else:
+            # Se não houver sobreposição, salvar normalmente
+            serializer.save(user=user)
 
 class CommonAvailabilityView(generics.CreateAPIView):
     serializer_class = CommonAvailabilityRequestSerializer
