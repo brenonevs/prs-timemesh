@@ -7,6 +7,13 @@ class AvailabilitySlotSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'date', 'start_time', 'end_time']
         read_only_fields = ['id', 'user']
 
+    def validate(self, attrs):
+        start = attrs.get('start_time')
+        end = attrs.get('end_time')
+        if start and end and start >= end:
+            raise serializers.ValidationError('O horário de início deve ser antes do horário de término.')
+        return attrs
+
 class CommonAvailabilityRequestSerializer(serializers.Serializer):
     users = serializers.ListField(
         child=serializers.IntegerField(),

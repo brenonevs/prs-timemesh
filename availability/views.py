@@ -42,22 +42,26 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
                 slot.start_time <= start_time and slot.end_time >= end_time
                 for slot in overlapping_slots
             )
-            # Se sim, deleta todos e cria apenas o novo
+            # Se sim, atualiza o slot original (primeiro sobreposto) para os novos horários
             if is_fully_contained:
-                for slot in overlapping_slots:
+                main_slot = overlapping_slots[0]
+                main_slot.start_time = start_time
+                main_slot.end_time = end_time
+                main_slot.save()
+                # Deleta os outros slots sobrepostos, se houver
+                for slot in overlapping_slots[1:]:
                     slot.delete()
-                serializer.save(user=user)
             else:
                 # Caso contrário, funde normalmente
                 new_start_time = min(start_time, *[slot.start_time for slot in overlapping_slots])
                 new_end_time = max(end_time, *[slot.end_time for slot in overlapping_slots])
-                for slot in overlapping_slots:
+                main_slot = overlapping_slots[0]
+                main_slot.start_time = new_start_time
+                main_slot.end_time = new_end_time
+                main_slot.save()
+                # Deleta os outros slots sobrepostos, se houver
+                for slot in overlapping_slots[1:]:
                     slot.delete()
-                serializer.save(
-                    user=user,
-                    start_time=new_start_time,
-                    end_time=new_end_time
-                )
         else:
             # Se não houver sobreposição, salvar normalmente
             serializer.save(user=user)
