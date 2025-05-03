@@ -5,8 +5,12 @@ from django.contrib.auth.models import User
 
 class AvailabilitySlot(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
 
     def __str__(self):
-        return f"{self.name} - {self.start_time} to {self.end_time}"
+        return f"{self.user.username} - {self.date} {self.start_time} to {self.end_time}"
+
+    class Meta:
+        unique_together = ['user', 'date', 'start_time', 'end_time']

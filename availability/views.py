@@ -11,8 +11,6 @@ from .serializers import (
 from datetime import time, timedelta
 from collections import defaultdict
 
-# Create your views here.
-
 class AvailabilitySlotViewSet(viewsets.ModelViewSet):
     serializer_class = AvailabilitySlotSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -32,9 +30,13 @@ class CommonAvailabilityView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         
         user_ids = serializer.validated_data['users']
+        date = serializer.validated_data['date']
         user_ids.append(request.user.id)
 
-        slots = AvailabilitySlot.objects.filter(user_id__in=user_ids)
+        slots = AvailabilitySlot.objects.filter(
+            user_id__in=user_ids,
+            date=date
+        )
         
         user_slots = defaultdict(list)
         for slot in slots:
@@ -74,6 +76,7 @@ class CommonAvailabilityView(generics.CreateAPIView):
                 if common_start < common_end:
                     users = User.objects.filter(id__in=user_ids).values_list('username', flat=True)
                     common_slots.append({
+                        'date': date,
                         'start_time': common_start,
                         'end_time': common_end,
                         'users': list(users)
