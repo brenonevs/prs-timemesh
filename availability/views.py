@@ -24,46 +24,39 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
         start_time = serializer.validated_data['start_time']
         end_time = serializer.validated_data['end_time']
 
-        # Buscar slots existentes no mesmo dia
         existing_slots = AvailabilitySlot.objects.filter(
             user=user,
             date=date
         )
 
-        # Verificar sobreposições
         overlapping_slots = []
         for slot in existing_slots:
             if (start_time <= slot.end_time and end_time >= slot.start_time):
                 overlapping_slots.append(slot)
 
         if overlapping_slots:
-            # Verifica se o novo horário está totalmente contido em todos os slots sobrepostos
             is_fully_contained = all(
                 slot.start_time <= start_time and slot.end_time >= end_time
                 for slot in overlapping_slots
             )
-            # Se sim, atualiza o slot original (primeiro sobreposto) para os novos horários
+
             if is_fully_contained:
                 main_slot = overlapping_slots[0]
                 main_slot.start_time = start_time
                 main_slot.end_time = end_time
                 main_slot.save()
-                # Deleta os outros slots sobrepostos, se houver
                 for slot in overlapping_slots[1:]:
                     slot.delete()
             else:
-                # Caso contrário, funde normalmente
                 new_start_time = min(start_time, *[slot.start_time for slot in overlapping_slots])
                 new_end_time = max(end_time, *[slot.end_time for slot in overlapping_slots])
                 main_slot = overlapping_slots[0]
                 main_slot.start_time = new_start_time
                 main_slot.end_time = new_end_time
                 main_slot.save()
-                # Deleta os outros slots sobrepostos, se houver
                 for slot in overlapping_slots[1:]:
                     slot.delete()
         else:
-            # Se não houver sobreposição, salvar normalmente
             serializer.save(user=user)
 
 class CommonAvailabilityView(generics.CreateAPIView):
