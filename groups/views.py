@@ -72,3 +72,13 @@ class GroupMembersListView(generics.ListAPIView):
         if not GroupMembership.objects.filter(group=group, user=self.request.user, accepted=True).exists():
             return GroupMembership.objects.none()
         return GroupMembership.objects.filter(group=group, accepted=True)
+
+class PendingInvitesListView(generics.ListAPIView):
+    serializer_class = GroupMembershipSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return GroupMembership.objects.filter(
+            user=self.request.user,
+            accepted=False
+        ).select_related('group', 'invited_by')
