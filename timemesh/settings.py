@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'availability',
     'users',
     'rest_framework',
+    'groups',
 ]
 
 MIDDLEWARE = [
