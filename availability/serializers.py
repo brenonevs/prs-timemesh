@@ -23,6 +23,11 @@ class CommonAvailabilityRequestSerializer(serializers.Serializer):
         help_text="Data para encontrar horários em comum"
     )
 
+class GroupCommonAvailabilityRequestSerializer(serializers.Serializer):
+    date = serializers.DateField(
+        help_text="Data para encontrar horários em comum entre os membros do grupo"
+    )
+
 class CommonAvailabilitySerializer(serializers.Serializer):
     date = serializers.DateField()
     start_time = serializers.TimeField()
