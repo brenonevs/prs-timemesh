@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from .models import Group, GroupMembership
 from .serializers import GroupSerializer, GroupMembershipSerializer
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 class GroupListCreateView(generics.ListCreateAPIView):
     serializer_class = GroupSerializer
@@ -54,6 +55,7 @@ class GroupAcceptInviteView(views.APIView):
                 accepted=False
             )
             membership.accepted = True
+            membership.accepted_at = timezone.now()
             membership.save()
             return Response({'detail': 'Convite aceito com sucesso!'})
         except GroupMembership.DoesNotExist:
@@ -82,3 +84,21 @@ class PendingInvitesListView(generics.ListAPIView):
             user=self.request.user,
             accepted=False
         ).select_related('group', 'invited_by')
+
+class GroupDeleteView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, group_id):
+        group = get_object_or_404(Group, id=group_id)
+        
+        if group.owner != request.user:
+            return Response(
+                {'detail': 'Apenas o dono do grupo pode deletá-lo.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        group.delete()
+        return Response(
+            {'detail': 'Grupo deletado com sucesso.'},
+            status=status.HTTP_204_NO_CONTENT
+        )

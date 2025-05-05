@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Group(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_groups')
     created_at = models.DateTimeField(auto_now_add=True)
     members = models.ManyToManyField(
@@ -21,6 +21,7 @@ class GroupMembership(models.Model):
     invited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='invitations_sent')
     accepted = models.BooleanField(default=False)
     invited_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('group', 'user')
