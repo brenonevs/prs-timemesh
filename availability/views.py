@@ -27,6 +27,7 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
         date = serializer.validated_data['date']
         start_time = serializer.validated_data['start_time']
         end_time = serializer.validated_data['end_time']
+        title = serializer.validated_data['title']
 
         existing_slots = AvailabilitySlot.objects.filter(
             user=user,
@@ -39,27 +40,59 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
                 overlapping_slots.append(slot)
 
         if overlapping_slots:
-            is_fully_contained = all(
-                slot.start_time <= start_time and slot.end_time >= end_time
-                for slot in overlapping_slots
-            )
+            # Para cada slot sobreposto, recorta em torno do novo slot
+            for slot in overlapping_slots:
+                # Primeiro deleta o slot original
+                slot.delete()
+                
+                # Cria slots recortados
+                if slot.start_time < start_time:
+                    # Cria slot antes do novo slot
+                    AvailabilitySlot.objects.create(
+                        user=user,
+                        date=date,
+                        start_time=slot.start_time,
+                        end_time=start_time,
+                        title=slot.title
+                    )
+                if slot.end_time > end_time:
+                    # Cria slot depois do novo slot
+                    AvailabilitySlot.objects.create(
+                        user=user,
+                        date=date,
+                        start_time=end_time,
+                        end_time=slot.end_time,
+                        title=slot.title
+                    )
+            
+            # Cria o novo slot
+            serializer.save(user=user)
 
-            if is_fully_contained:
-                main_slot = overlapping_slots[0]
-                main_slot.start_time = start_time
-                main_slot.end_time = end_time
-                main_slot.save()
-                for slot in overlapping_slots[1:]:
-                    slot.delete()
-            else:
-                new_start_time = min(start_time, *[slot.start_time for slot in overlapping_slots])
-                new_end_time = max(end_time, *[slot.end_time for slot in overlapping_slots])
-                main_slot = overlapping_slots[0]
-                main_slot.start_time = new_start_time
-                main_slot.end_time = new_end_time
-                main_slot.save()
-                for slot in overlapping_slots[1:]:
-                    slot.delete()
+            # Junta slots contíguos com o mesmo título
+            slots = AvailabilitySlot.objects.filter(
+                user=user,
+                date=date
+            ).order_by('start_time')
+
+            i = 0
+            while i < len(slots) - 1:
+                current = slots[i]
+                next_slot = slots[i + 1]
+                
+                if (current.end_time == next_slot.start_time and 
+                    current.title == next_slot.title):
+                    # Atualiza o slot atual para cobrir ambos
+                    current.end_time = next_slot.end_time
+                    current.save()
+                    # Deleta o próximo slot
+                    next_slot.delete()
+                    # Atualiza a lista de slots
+                    slots = list(AvailabilitySlot.objects.filter(
+                        user=user,
+                        date=date
+                    ).order_by('start_time'))
+                else:
+                    i += 1
         else:
             serializer.save(user=user)
 
@@ -74,6 +107,7 @@ class CommonAvailabilityView(generics.CreateAPIView):
         user_ids = serializer.validated_data['users']
         date = serializer.validated_data['date']
         user_ids.append(request.user.id)
+        user_ids = list(dict.fromkeys(user_ids))
 
         slots = AvailabilitySlot.objects.filter(
             user_id__in=user_ids,
@@ -81,49 +115,40 @@ class CommonAvailabilityView(generics.CreateAPIView):
         )
         
         user_slots = defaultdict(list)
+        time_points = set()
         for slot in slots:
             user_slots[slot.user_id].append(slot)
+            time_points.add(slot.start_time)
+            time_points.add(slot.end_time)
 
-        common_slots = []
         if len(user_slots) < 2:
-            return Response(common_slots)
+            return Response([])
 
-        base_slots = user_slots[user_ids[0]]
-        
-        for base_slot in base_slots:
-            overlapping_slots = []
-            for user_id in user_ids[1:]:
-                user_overlaps = []
-                for slot in user_slots[user_id]:
-                    if (base_slot.start_time <= slot.end_time and 
-                        base_slot.end_time >= slot.start_time):
-                        overlap_start = max(base_slot.start_time, slot.start_time)
-                        overlap_end = min(base_slot.end_time, slot.end_time)
-                        user_overlaps.append((overlap_start, overlap_end))
-                
-                if not user_overlaps:
-                    break
-                overlapping_slots.append(user_overlaps)
-            
-            if len(overlapping_slots) == len(user_ids) - 1:
-                common_start = base_slot.start_time
-                common_end = base_slot.end_time
-                
-                for user_overlaps in overlapping_slots:
-                    user_start = max(overlap[0] for overlap in user_overlaps)
-                    user_end = min(overlap[1] for overlap in user_overlaps)
-                    common_start = max(common_start, user_start)
-                    common_end = min(common_end, user_end)
-                
-                if common_start < common_end:
-                    users = User.objects.filter(id__in=user_ids).values_list('username', flat=True)
-                    common_slots.append({
-                        'date': date,
-                        'start_time': common_start,
-                        'end_time': common_end,
-                        'users': list(users)
+        time_points = sorted(time_points)
+        common_slots = []
+        for i in range(len(time_points) - 1):
+            interval_start = time_points[i]
+            interval_end = time_points[i + 1]
+            users_info = []
+            all_available = True
+            for uid in user_ids:
+                slot = next((s for s in user_slots[uid] if s.start_time <= interval_start and s.end_time >= interval_end), None)
+                if slot:
+                    user = User.objects.get(id=uid)
+                    users_info.append({
+                        'username': user.username,
+                        'title': slot.title
                     })
-
+                else:
+                    all_available = False
+                    break
+            if all_available:
+                common_slots.append({
+                    'date': date,
+                    'start_time': interval_start,
+                    'end_time': interval_end,
+                    'users': users_info
+                })
         return Response(common_slots)
 
 class GroupCommonAvailabilityView(generics.CreateAPIView):
@@ -152,9 +177,7 @@ class GroupCommonAvailabilityView(generics.CreateAPIView):
             group=group,
             accepted=True
         ).values_list('user_id', flat=True))
-
-        if not user_ids:
-            return Response([])
+        user_ids = list(dict.fromkeys(user_ids))
 
         slots = AvailabilitySlot.objects.filter(
             user_id__in=user_ids,
@@ -162,47 +185,38 @@ class GroupCommonAvailabilityView(generics.CreateAPIView):
         )
         
         user_slots = defaultdict(list)
+        time_points = set()
         for slot in slots:
             user_slots[slot.user_id].append(slot)
+            time_points.add(slot.start_time)
+            time_points.add(slot.end_time)
 
-        common_slots = []
         if len(user_slots) < 2:
-            return Response(common_slots)
+            return Response([])
 
-        base_slots = user_slots[user_ids[0]]
-        
-        for base_slot in base_slots:
-            overlapping_slots = []
-            for user_id in user_ids[1:]:
-                user_overlaps = []
-                for slot in user_slots[user_id]:
-                    if (base_slot.start_time <= slot.end_time and 
-                        base_slot.end_time >= slot.start_time):
-                        overlap_start = max(base_slot.start_time, slot.start_time)
-                        overlap_end = min(base_slot.end_time, slot.end_time)
-                        user_overlaps.append((overlap_start, overlap_end))
-                
-                if not user_overlaps:
-                    break
-                overlapping_slots.append(user_overlaps)
-            
-            if len(overlapping_slots) == len(user_ids) - 1:
-                common_start = base_slot.start_time
-                common_end = base_slot.end_time
-                
-                for user_overlaps in overlapping_slots:
-                    user_start = max(overlap[0] for overlap in user_overlaps)
-                    user_end = min(overlap[1] for overlap in user_overlaps)
-                    common_start = max(common_start, user_start)
-                    common_end = min(common_end, user_end)
-                
-                if common_start < common_end:
-                    users = User.objects.filter(id__in=user_ids).values_list('username', flat=True)
-                    common_slots.append({
-                        'date': date,
-                        'start_time': common_start,
-                        'end_time': common_end,
-                        'users': list(users)
+        time_points = sorted(time_points)
+        common_slots = []
+        for i in range(len(time_points) - 1):
+            interval_start = time_points[i]
+            interval_end = time_points[i + 1]
+            users_info = []
+            all_available = True
+            for uid in user_ids:
+                slot = next((s for s in user_slots[uid] if s.start_time <= interval_start and s.end_time >= interval_end), None)
+                if slot:
+                    user = User.objects.get(id=uid)
+                    users_info.append({
+                        'username': user.username,
+                        'title': slot.title
                     })
-
+                else:
+                    all_available = False
+                    break
+            if all_available:
+                common_slots.append({
+                    'date': date,
+                    'start_time': interval_start,
+                    'end_time': interval_end,
+                    'users': users_info
+                })
         return Response(common_slots)

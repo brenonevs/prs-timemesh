@@ -4,7 +4,7 @@ from .models import AvailabilitySlot
 class AvailabilitySlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = AvailabilitySlot
-        fields = ['id', 'user', 'date', 'start_time', 'end_time']
+        fields = ['id', 'user', 'date', 'start_time', 'end_time', 'title']
         read_only_fields = ['id', 'user']
 
     def validate(self, attrs):
@@ -13,6 +13,13 @@ class AvailabilitySlotSerializer(serializers.ModelSerializer):
         if start and end and start >= end:
             raise serializers.ValidationError('O horário de início deve ser antes do horário de término.')
         return attrs
+
+    def validate_title(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError('O título é obrigatório.')
+        if len(value) > 100:
+            raise serializers.ValidationError('O título deve ter no máximo 100 caracteres.')
+        return value.strip()
 
 class CommonAvailabilityRequestSerializer(serializers.Serializer):
     users = serializers.ListField(
@@ -32,4 +39,4 @@ class CommonAvailabilitySerializer(serializers.Serializer):
     date = serializers.DateField()
     start_time = serializers.TimeField()
     end_time = serializers.TimeField()
-    users = serializers.ListField(child=serializers.CharField())
+    users = serializers.ListField(child=serializers.DictField())

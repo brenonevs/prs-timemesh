@@ -88,8 +88,7 @@ class GroupInviteStatsView(generics.RetrieveAPIView):
                 {'detail': 'Você não é membro deste grupo.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
-        # Calcula estatísticas apenas para convites deste grupo
+    
         invite_stats = GroupMembership.objects.filter(
             group=group,
             invited_by=user
