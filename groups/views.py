@@ -5,6 +5,7 @@ from .models import Group, GroupMembership
 from .serializers import GroupSerializer, GroupMembershipSerializer
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+import requests
 
 class GroupListCreateView(generics.ListCreateAPIView):
     serializer_class = GroupSerializer
@@ -41,6 +42,19 @@ class GroupInviteView(views.APIView):
             invited_by=request.user,
             accepted=False
         )
+        
+        payload = {
+            "grupo": group.name,
+            "convidado": user.username,
+            "email_convidado": user.email,
+            "convidado_por": request.user.username,
+            "link_aceite": f"https://your-site.com/groups/{group.id}/accept/"
+        }
+        try:
+            requests.post("http://n8n:5678/webhook/group-invite", json=payload, timeout=5)
+        except Exception as e:
+            print(f"Erro ao notificar n8n: {e}")
+
         return Response({'detail': f'Convite enviado para {username}.'})
 
 class GroupAcceptInviteView(views.APIView):
