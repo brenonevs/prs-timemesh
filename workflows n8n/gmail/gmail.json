@@ -1,0 +1,76 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "group-invite",
+        "authentication": "basicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4568eab2-0a95-453c-a51c-26481cdee047",
+      "name": "Webhook",
+      "webhookId": "d532b9ec-7cab-402f-88b9-5efcd3720361",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "HcWjRpbk5P3uN2P3",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.body.email_convidado }}",
+        "subject": "=📬 Convite para entrar no grupo \"{{ $json.body.grupo }}\" no TimeMesh",
+        "message": "=<div style=\"font-family: 'Segoe UI', 'Roboto', Helvetica, sans-serif; color: #333; line-height: 1.7; max-width: 640px; margin: 0 auto; background-color: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);\">    <div style=\"text-align: center;\">     <img src=\"https://i.imgur.com/vi4zh2L.png\" alt=\"Convite TimeMesh\"          style=\"display: block; width: 100%; height: auto; margin: 0 auto 32px auto; border-radius: 8px;\">   </div>    <h2 style=\"color: #2F80ED; margin-bottom: 20px; font-size: 24px;\">     📬 Você foi convidado para participar do grupo <em>\"{{ $json.body.grupo }}\"</em> no TimeMesh   </h2>    <p style=\"font-size: 16px;\">Olá <strong>{{ $json.body.convidado }}</strong>,</p>    <p style=\"font-size: 16px;\">     O usuário <strong>{{ $json.body.convidado_por }}</strong> está organizando os compromissos do grupo <strong>\"{{ $json.body.grupo }}\"</strong> com o apoio do <strong>TimeMesh</strong>, e gostaria muito de contar com sua presença.   </p>    <p style=\"font-size: 16px;\">     O TimeMesh é uma plataforma de agendamento colaborativo que encontra os melhores horários em comum entre participantes, eliminando a necessidade de planilhas ou trocas intermináveis de mensagens.   </p>    <p style=\"font-size: 16px;\">Ao participar, você poderá:</p>    <ul style=\"padding-left: 20px; margin-bottom: 24px; font-size: 16px;\">     <li>Cadastrar e atualizar sua disponibilidade</li>     <li>Visualizar os demais integrantes do grupo</li>     <li>Receber sugestões automáticas de horários ideais</li>     <li>Agilizar a marcação de encontros, reuniões e eventos</li>   </ul>    <p style=\"margin-bottom: 24px; font-size: 16px;\">     É simples, prático e feito para facilitar sua rotina.   </p>    <div style=\"text-align: center; margin: 30px 0;\">     <a href=\"{{ $json.body.link_aceite }}\"        style=\"padding: 14px 28px; background-color: #27ae60; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;\">       ✅ Aceitar Convite e Entrar no Grupo     </a>   </div>    <hr style=\"margin: 40px 0; border: none; border-top: 1px solid #ddd;\">    <p style=\"font-size: 13px; color: #777;\">     Se você não reconhece este convite ou prefere não participar, pode ignorar este e-mail com segurança. Nenhuma ação será tomada sem sua autorização.   </p>    <p style=\"font-size: 12px; color: #aaa; text-align: center; margin-top: 32px;\">     Este e-mail foi enviado automaticamente pela plataforma TimeMesh.<br>     © 2025 TimeMesh — Todos os direitos reservados.   </p> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        220,
+        0
+      ],
+      "id": "64e25341-1774-4a18-8461-ce0bb0979045",
+      "name": "Gmail",
+      "webhookId": "bb051c8d-43f2-45a8-aadb-8ba94e67984e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bLVyVFpFkJcEVII7",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8fc6d75d-7de0-4d79-80a0-affd849b29b5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5452bf9b47fe5b3346e145c0ed2b7dd37d9892e0191dd1d2b5e5f3620714fd95"
+  },
+  "id": "KJTBgQn0KN7o0CER",
+  "tags": []
+}

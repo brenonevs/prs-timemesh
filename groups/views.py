@@ -6,7 +6,8 @@ from .serializers import GroupSerializer, GroupMembershipSerializer
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 import requests
-
+import os
+from requests.auth import HTTPBasicAuth
 class GroupListCreateView(generics.ListCreateAPIView):
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -50,10 +51,23 @@ class GroupInviteView(views.APIView):
             "convidado_por": request.user.username,
             "link_aceite": f"https://your-site.com/groups/{group.id}/accept/"
         }
+        N8N_BASIC_USER = os.getenv("N8N_BASIC_USER")
+        N8N_BASIC_PASSWORD = os.getenv("N8N_BASIC_PASSWORD")
+        auth = HTTPBasicAuth(N8N_BASIC_USER, N8N_BASIC_PASSWORD)
+
         try:
-            requests.post("http://n8n:5678/webhook/group-invite", json=payload, timeout=5)
+            response = requests.post(
+                "http://n8n:5678/webhook/group-invite",
+                json=payload,
+                auth=auth,
+                timeout=5
+            )
+            if response.status_code >= 200 and response.status_code < 300:
+                print(f"[n8n] E-mail enviado para {user.email} com sucesso!", flush=True)
+            else:
+                print(f"[n8n] Falha ao enviar e-mail para {user.email}. Status: {response.status_code}", flush=True)
         except Exception as e:
-            print(f"Erro ao notificar n8n: {e}")
+            print(f"[n8n] Erro ao notificar n8n para {user.email}: {e}", flush=True)
 
         return Response({'detail': f'Convite enviado para {username}.'})
 
