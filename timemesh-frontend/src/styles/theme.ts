@@ -1,14 +1,18 @@
 import { createTheme } from '@mui/material/styles';
 
+// Obtendo as cores das variáveis de ambiente
+const primaryColor = import.meta.env.VITE_PRIMARY_COLOR || '#1976d2';
+const secondaryColor = import.meta.env.VITE_SECONDARY_COLOR || '#9c27b0';
+
 export const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: primaryColor,
       light: '#42a5f5',
       dark: '#1565c0',
     },
     secondary: {
-      main: '#9c27b0',
+      main: secondaryColor,
       light: '#ba68c8',
       dark: '#7b1fa2',
     },

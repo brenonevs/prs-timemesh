@@ -6,6 +6,8 @@ __pycache__/
 *.pyc
 .Python
 .env
+.env.development
+.env.production
 .venv/
 venv/
 ENV/
@@ -91,3 +93,5 @@ test-results/
 logs/
 *.out
 *.err
+
+#
