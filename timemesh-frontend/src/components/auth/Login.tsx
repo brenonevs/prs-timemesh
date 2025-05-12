@@ -5,13 +5,15 @@ import { SocialLoginButtons } from './SocialLoginButtons';
 import { InputField } from '../ui/form/InputField';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../hooks/useAuth';
+import { FaApple, FaGoogle, FaTimes, FaEnvelope, FaLock } from 'react-icons/fa';
+import { authService } from '../../services/auth';
 
 export const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
   });
   const [error, setError] = useState('');
@@ -31,12 +33,13 @@ export const Login = () => {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await login(formData.email, formData.password);
+      const { access, refresh } = await authService.login(formData.username, formData.password);
+      localStorage.setItem('accessToken', access);
+      localStorage.setItem('refreshToken', refresh);
+      await login(formData.username, formData.password);
       navigate('/dashboard');
-    } catch (err) {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      setError('Usuário ou senha inválidos');
     } finally {
       setIsLoading(false);
     }
@@ -59,10 +62,10 @@ export const Login = () => {
       <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
         <InputField
           icon={<EnvelopeIcon size={18} />}
-          name="email"
+          name="username"
           type="email"
           placeholder="Email address"
-          value={formData.email}
+          value={formData.username}
           onChange={handleChange}
           required
         />
