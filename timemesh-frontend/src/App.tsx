@@ -1,48 +1,49 @@
-import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { theme } from './styles/theme';
-import { store } from './store';
-import { Home } from './pages/Home';
-import { Login } from './components/auth/Login';
-import { Register } from './components/auth/Register';
-import { authService } from './services/auth';
 
+// Pages
+import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
+import { Dashboard } from './pages/dashboard/Dashboard';
+import { NotFound } from './pages/NotFound';
+
+// Components
+import { ProtectedRoute } from './components/routing/ProtectedRoute';
+
+// Create a client
 const queryClient = new QueryClient();
-
-// Componente para rotas protegidas
-const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
-};
 
 function App() {
   return (
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              {/* Adicionar rotas protegidas aqui */}
-              {/* <Route
-                path="/dashboard"
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                }
-              /> */}
+              {/* Public routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              
+              {/* Protected routes */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              
+              {/* Redirect root to login */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              
+              {/* 404 Page */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </Provider>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

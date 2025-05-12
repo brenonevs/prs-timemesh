@@ -1,29 +1,23 @@
-import { useState } from 'react';
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Container,
-  Paper,
-  Link,
-  Grid,
-} from '@mui/material';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../../services/auth';
+import { TelescopeIcon as EnvelopeIcon, DoorClosedIcon as LockClosedIcon, UserIcon } from 'lucide-react';
+import { SocialLoginButtons } from './SocialLoginButtons';
+import { InputField } from '../ui/form/InputField';
+import { Button } from '../ui/Button';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Register = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
+  
   const [formData, setFormData] = useState({
-    username: '',
+    name: '',
     email: '',
-    firstName: '',
-    lastName: '',
     password: '',
-    password2: '',
+    confirmPassword: '',
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,165 +29,98 @@ export const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    if (formData.password !== formData.password2) {
-      setError('As senhas não coincidem');
+    
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
-
-    setLoading(true);
+    
+    setError('');
+    setIsLoading(true);
+    
     try {
-      await authService.register({
-        username: formData.username,
-        email: formData.email,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        password: formData.password,
-        password2: formData.password2,
-      });
-      setLoading(false);
-      navigate('/login');
-    } catch (err: any) {
-      setLoading(false);
-      if (err.response && err.response.data) {
-        const data = err.response.data;
-        if (typeof data === 'string') {
-          setError(data);
-        } else if (typeof data === 'object') {
-          const firstError = Object.values(data)[0];
-          setError(Array.isArray(firstError) ? firstError[0] : firstError);
-        } else {
-          setError('Erro ao criar conta. Tente novamente.');
-        }
-      } else {
-        setError('Erro ao criar conta. Tente novamente.');
-      }
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await register(formData.name, formData.email, formData.password);
+      navigate('/dashboard');
+    } catch (err) {
+      setError('Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <Typography component="h1" variant="h5">
-            Criar Conta
-          </Typography>
-          
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  label="Nome"
-                  name="firstName"
-                  autoComplete="given-name"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  label="Sobrenome"
-                  name="lastName"
-                  autoComplete="family-name"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  label="Nome de usuário"
-                  name="username"
-                  autoComplete="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  label="Email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  name="password"
-                  label="Senha"
-                  type="password"
-                  autoComplete="new-password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  name="password2"
-                  label="Confirmar Senha"
-                  type="password"
-                  autoComplete="new-password"
-                  value={formData.password2}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
-              </Grid>
-            </Grid>
-
-            {error && (
-              <Typography color="error" sx={{ mt: 2 }}>
-                {error}
-              </Typography>
-            )}
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? 'Registrando...' : 'Registrar'}
-            </Button>
-            
-            <Box sx={{ textAlign: 'center' }}>
-              <Link
-                component="button"
-                variant="body2"
-                onClick={() => navigate('/login')}
-                disabled={loading}
-              >
-                Já tem uma conta? Entre
-              </Link>
-            </Box>
-          </Box>
-        </Box>
-      </Paper>
-    </Container>
+    <div className="bg-card rounded-2xl shadow-xl p-8 border border-border animate-fadeIn">
+      <div className="flex flex-col items-center gap-2 mb-6">
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">Create Account</h1>
+        <p className="text-sm text-muted-foreground">
+          Already have an account? <button 
+            className="text-primary hover:text-primary/80 transition" 
+            onClick={() => navigate('/login')}
+          >
+            Sign in
+          </button>
+        </p>
+      </div>
+      
+      <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
+        <InputField
+          icon={<UserIcon size={18} />}
+          name="name"
+          type="text"
+          placeholder="Full name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+        />
+        
+        <InputField
+          icon={<EnvelopeIcon size={18} />}
+          name="email"
+          type="email"
+          placeholder="Email address"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+        
+        <InputField
+          icon={<LockClosedIcon size={18} />}
+          name="password"
+          type="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
+          required
+        />
+        
+        <InputField
+          icon={<LockClosedIcon size={18} />}
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm password"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          required
+        />
+        
+        {error && (
+          <div className="text-destructive text-sm text-center my-1 animate-shake">{error}</div>
+        )}
+        
+        <Button type="submit" variant="primary" isLoading={isLoading} className="mt-2">
+          Create Account
+        </Button>
+      </form>
+      
+      <div className="flex items-center w-full gap-2 my-6">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-muted-foreground text-xs font-medium">OR CONTINUE WITH</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      
+      <SocialLoginButtons />
+    </div>
   );
-}; 
+};

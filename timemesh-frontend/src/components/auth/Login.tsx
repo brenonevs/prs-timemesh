@@ -1,22 +1,21 @@
-import { useState } from 'react';
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Container,
-  Paper,
-  Link,
-} from '@mui/material';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { TelescopeIcon as EnvelopeIcon, DoorClosedIcon as LockClosedIcon } from 'lucide-react';
+import { SocialLoginButtons } from './SocialLoginButtons';
+import { InputField } from '../ui/form/InputField';
+import { Button } from '../ui/Button';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -29,84 +28,90 @@ export const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
+    setIsLoading(true);
+    
     try {
-      // TODO: Implementar chamada à API
-      console.log('Login:', formData);
-      // Após login bem-sucedido:
-      // navigate('/dashboard');
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await login(formData.email, formData.password);
+      navigate('/dashboard');
     } catch (err) {
-      setError('Erro ao fazer login. Verifique suas credenciais.');
+      setError('Invalid email or password');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <Typography component="h1" variant="h5">
-            Entrar no TimeMesh
-          </Typography>
-          
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="username"
-              label="Nome de usuário"
-              name="username"
-              autoComplete="username"
-              autoFocus
-              value={formData.username}
-              onChange={handleChange}
+    <div className="bg-card rounded-2xl shadow-xl p-8 border border-border animate-fadeIn">
+      <div className="flex flex-col items-center gap-2 mb-6">
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">Welcome Back</h1>
+        <p className="text-sm text-muted-foreground">
+          Don't have an account yet? <button 
+            className="text-primary hover:text-primary/80 transition" 
+            onClick={() => navigate('/register')}
+          >
+            Sign up
+          </button>
+        </p>
+      </div>
+      
+      <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
+        <InputField
+          icon={<EnvelopeIcon size={18} />}
+          name="email"
+          type="email"
+          placeholder="Email address"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+        
+        <InputField
+          icon={<LockClosedIcon size={18} />}
+          name="password"
+          type="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
+          required
+        />
+        
+        <div className="flex items-center justify-between mt-1 mb-2">
+          <div className="flex items-center">
+            <input 
+              id="remember-me" 
+              type="checkbox" 
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary/20"
             />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Senha"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange}
-            />
-            
-            {error && (
-              <Typography color="error" sx={{ mt: 2 }}>
-                {error}
-              </Typography>
-            )}
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-            >
-              Entrar
-            </Button>
-            
-            <Box sx={{ textAlign: 'center' }}>
-              <Link
-                component="button"
-                variant="body2"
-                onClick={() => navigate('/register')}
-              >
-                Não tem uma conta? Registre-se
-              </Link>
-            </Box>
-          </Box>
-        </Box>
-      </Paper>
-    </Container>
+            <label htmlFor="remember-me" className="ml-2 text-sm text-muted-foreground">
+              Remember me
+            </label>
+          </div>
+          <button 
+            type="button" 
+            className="text-sm text-primary hover:text-primary/80 transition"
+          >
+            Forgot password?
+          </button>
+        </div>
+        
+        {error && (
+          <div className="text-destructive text-sm text-center my-1 animate-shake">{error}</div>
+        )}
+        
+        <Button type="submit" variant="primary" isLoading={isLoading} className="mt-2">
+          Sign In
+        </Button>
+      </form>
+      
+      <div className="flex items-center w-full gap-2 my-6">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-muted-foreground text-xs font-medium">OR CONTINUE WITH</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      
+      <SocialLoginButtons />
+    </div>
   );
-}; 
+};
