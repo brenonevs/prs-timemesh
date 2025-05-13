@@ -19,7 +19,7 @@ interface SidebarProps {
 
 const navItems = [
   { icon: <LayoutDashboard size={20} />, label: 'Dashboard', to: '/dashboard' },
-  { icon: <Calendar size={20} />, label: 'Calendar', to: '/calendar' },
+  { icon: <Calendar size={20} />, label: 'Agenda', to: '/calendar' },
   { icon: <BarChart2 size={20} />, label: 'Analytics', to: '/analytics' },
   { icon: <ClipboardList size={20} />, label: 'Projects', to: '/projects' },
   { icon: <Users size={20} />, label: 'Team', to: '/team' },

@@ -1,5 +1,7 @@
 import React, { createContext, ReactNode, useState } from 'react';
 import { authService } from '../services/auth';
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 
 interface User {
   id: string;
