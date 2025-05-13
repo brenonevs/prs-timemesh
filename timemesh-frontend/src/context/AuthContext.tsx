@@ -33,28 +33,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return savedUser ? JSON.parse(savedUser) : null;
   });
   
-  const login = async (email: string, password: string) => {
-    // This would be an API call in a real application
-    // For demo purposes, we'll just set a mock user
-    const mockUser = {
-      id: '123',
-      name: 'John Doe',
-      email,
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
+  const login = async (username: string, password: string) => {
+    const { access, refresh } = await authService.login(username, password);
+    localStorage.setItem('access_token', access);
+    localStorage.setItem('refresh_token', refresh);
+
+    // Aqui você pode buscar os dados do usuário autenticado, se desejar
+    // Exemplo: const user = await api.get('/api/users/me/');
+    // setUser(user.data);
   };
   
   const register = async (name: string, email: string, password: string) => {
-    // Divide o nome em primeiro e último nome
     const [first_name, ...rest] = name.trim().split(' ');
     const last_name = rest.join(' ') || '-';
 
-    // Gere um username a partir do email
     const username = email.split('@')[0];
 
-    // Chama a API de registro
     const response = await authService.register({
       username,
       email,
@@ -64,10 +58,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       last_name,
     });
 
-    // Se a resposta trouxer o usuário, salve no contexto/localStorage
     if (response && response.user) {
       setUser({
-        id: '0', // Ajuste se o backend retornar um id real
+        id: '0', 
         name: `${response.user.first_name} ${response.user.last_name}`,
         email: response.user.email,
       });

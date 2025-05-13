@@ -33,10 +33,11 @@ export const Login = () => {
     setIsLoading(true);
     
     try {
-      const { access, refresh } = await authService.login(formData.username, formData.password);
+      const username = formData.username.split('@')[0];
+      const { access, refresh } = await authService.login(username, formData.password);
       localStorage.setItem('accessToken', access);
       localStorage.setItem('refreshToken', refresh);
-      await login(formData.username, formData.password);
+      await login(username, formData.password);
       navigate('/dashboard');
     } catch (err: any) {
       setError('Usuário ou senha inválidos');
