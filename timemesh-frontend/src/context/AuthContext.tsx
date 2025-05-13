@@ -38,9 +38,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     localStorage.setItem('access_token', access);
     localStorage.setItem('refresh_token', refresh);
 
-    // Aqui você pode buscar os dados do usuário autenticado, se desejar
-    // Exemplo: const user = await api.get('/api/users/me/');
-    // setUser(user.data);
+    const userData = await authService.getMe();
+    const name = `${userData.first_name} ${userData.last_name}`.trim() || userData.username;
+    setUser({
+      id: userData.id,
+      name,
+      email: userData.email,
+    });
+    localStorage.setItem(
+      'user',
+      JSON.stringify({
+        id: userData.id,
+        name,
+        email: userData.email,
+      })
+    );
   };
   
   const register = async (name: string, email: string, password: string) => {

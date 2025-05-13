@@ -1,10 +1,12 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions
-from .serializers import UserRegistrationSerializer
+from .serializers import UserRegistrationSerializer, UserMeSerializer
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
+from django.contrib.auth.models import User
+from rest_framework import serializers
 
-# Create your views here.
 
 class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
@@ -24,3 +26,10 @@ class UserRegistrationView(generics.CreateAPIView):
                 }
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class UserMeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserMeSerializer(request.user)
+        return Response(serializer.data)

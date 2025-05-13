@@ -9,4 +9,8 @@ export const authService = {
     const response = await api.post('/api/users/register/', data);
     return response.data;
   },
+  async getMe() {
+    const response = await api.get('/api/users/me/');
+    return response.data;
+  }
 }; 
