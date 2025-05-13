@@ -5,6 +5,7 @@ import { SocialLoginButtons } from './SocialLoginButtons';
 import { InputField } from '../ui/form/InputField';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../hooks/useAuth';
+import { authService } from '../services/auth';
 
 export const Register = () => {
   const navigate = useNavigate();
