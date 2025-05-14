@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MainLayout } from '../../layouts/MainLayout';
-import { Clock, Tag, X, AlertCircle, Trash2, CheckCircle2 } from 'lucide-react';
+import { Clock, Tag, X, AlertCircle, Trash2, CheckCircle2, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { DayPicker } from 'react-day-picker';
+import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import 'react-day-picker/dist/style.css';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 6:00 AM to 10:00 PM
@@ -13,6 +16,7 @@ interface TimeSlot {
   isAvailable: boolean;
   label?: string;
   notes?: string;
+  date?: string;
 }
 
 interface SlotModalProps {
@@ -131,14 +135,118 @@ const SlotModal = ({ slots, onClose, onSave }: SlotModalProps) => {
   );
 };
 
+const DateSelector = ({ selectedDate, onDateChange }) => {
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+        setIsCalendarOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handlePrevWeek = () => {
+    onDateChange(addDays(selectedDate, -7));
+  };
+
+  const handleNextWeek = () => {
+    onDateChange(addDays(selectedDate, 7));
+  };
+
+  return (
+    <div className="relative flex items-center gap-2">
+      <button
+        onClick={handlePrevWeek}
+        className="p-2 hover:bg-secondary/20 rounded-lg transition-colors"
+        aria-label="Previous week"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+
+      <button
+        onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+        className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-secondary/10 transition-colors"
+      >
+        <CalendarIcon className="w-4 h-4 text-primary" />
+        <span className="font-medium">{format(selectedDate, 'MMMM yyyy')}</span>
+      </button>
+
+      <button
+        onClick={handleNextWeek}
+        className="p-2 hover:bg-secondary/20 rounded-lg transition-colors"
+        aria-label="Next week"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+
+      {isCalendarOpen && (
+        <div
+          ref={calendarRef}
+          className="absolute top-full mt-2 z-50 bg-card border border-border rounded-lg shadow-lg p-2"
+        >
+          <DayPicker
+            mode="single"
+            selected={selectedDate}
+            onSelect={(date) => {
+              if (date) {
+                onDateChange(date);
+                setIsCalendarOpen(false);
+              }
+            }}
+            className="bg-card rounded-lg"
+            classNames={{
+              months: "flex flex-col",
+              month: "space-y-4",
+              caption: "flex justify-center pt-1 relative items-center",
+              caption_label: "text-sm font-medium",
+              nav: "space-x-1 flex items-center",
+              nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse space-y-1",
+              head_row: "flex",
+              head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+              row: "flex w-full mt-2",
+              cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+              day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
+              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+              day_today: "bg-accent text-accent-foreground",
+              day_outside: "text-muted-foreground opacity-50",
+              day_disabled: "text-muted-foreground opacity-50",
+              day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+              day_hidden: "invisible",
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const CalendarPage = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [showSlotModal, setShowSlotModal] = useState(false);
-  const [mouseDown, setMouseDown] = useState<{ button: number; day: string; hour: number } | null>(null);
+  const [mouseDown, setMouseDown] = useState<{ button: number; day: string; hour: number; x: number; y: number } | null>(null);
   const [currentHover, setCurrentHover] = useState<{ day: string; hour: number } | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isDragging, setIsDragging] = useState(false);
   
   const gridRef = useRef<HTMLDivElement>(null);
+  const modalTimeoutRef = useRef<number>();
+
+  useEffect(() => {
+    return () => {
+      if (modalTimeoutRef.current) {
+        window.clearTimeout(modalTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const getSlotFromElement = (element: HTMLElement | null): { day: string; hour: number } | null => {
     if (!element?.closest('.time-slot')) return null;
@@ -160,13 +268,25 @@ export const CalendarPage = () => {
     
     setMouseDown({
       button: e.button,
-      ...slot
+      ...slot,
+      x: e.clientX,
+      y: e.clientY
     });
     setCurrentHover(slot);
+    setIsDragging(false);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!mouseDown) return;
+
+    const distance = Math.sqrt(
+      Math.pow(e.clientX - mouseDown.x, 2) + 
+      Math.pow(e.clientY - mouseDown.y, 2)
+    );
+
+    if (distance > 5) {
+      setIsDragging(true);
+    }
     
     const target = e.target as HTMLElement;
     const slot = getSlotFromElement(target);
@@ -184,17 +304,25 @@ export const CalendarPage = () => {
 
     const slots = getSelectedSlots(mouseDown, currentHover);
     
-    if (mouseDown.button === 2) { // Right click - delete
+    if (mouseDown.button === 2) {
       setTimeSlots(prev => prev.filter(slot => 
         !slots.some(s => s.id === slot.id)
       ));
-    } else if (mouseDown.button === 0) { // Left click - add/edit
+    } else if (mouseDown.button === 0) {
       setSelectedSlots(slots);
-      setShowSlotModal(true);
+      
+      if (!isDragging) {
+        setShowSlotModal(true);
+      } else {
+        modalTimeoutRef.current = window.setTimeout(() => {
+          setShowSlotModal(true);
+        }, 200);
+      }
     }
 
     setMouseDown(null);
     setCurrentHover(null);
+    setIsDragging(false);
   };
 
   const getSelectedSlots = (start: { day: string; hour: number }, end: { day: string; hour: number }) => {
@@ -238,7 +366,8 @@ export const CalendarPage = () => {
         const existingSlotIndex = newSlots.findIndex(slot => slot.id === selectedSlot.id);
         const updatedSlot = {
           ...selectedSlot,
-          ...data
+          ...data,
+          date: selectedDate.toISOString(),
         };
         
         if (existingSlotIndex !== -1) {
@@ -259,7 +388,10 @@ export const CalendarPage = () => {
   };
 
   const getSlotInfo = (day: string, hour: number) => {
-    return timeSlots.find(slot => slot.id === `${day}-${hour}`);
+    return timeSlots.find(slot => 
+      slot.id === `${day}-${hour}` && 
+      (!slot.date || new Date(slot.date).toDateString() === selectedDate.toDateString())
+    );
   };
 
   const isSlotInSelection = (day: string, hour: number) => {
@@ -281,11 +413,18 @@ export const CalendarPage = () => {
     );
   };
 
+  const getWeekDates = () => {
+    const monday = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    return WEEKDAYS.map((_, index) => addDays(monday, index));
+  };
+
+  const weekDates = getWeekDates();
+
   return (
     <MainLayout>
       <div className="flex flex-col h-[calc(100vh-6rem)] gap-4 animate-fadeIn">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-xl font-bold text-foreground">Schedule</h1>
             <div className="flex items-center gap-2">
@@ -293,6 +432,11 @@ export const CalendarPage = () => {
               <span className="text-xs text-muted-foreground">Set your weekly availability</span>
             </div>
           </div>
+
+          <DateSelector 
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
 
           <div className="flex items-center gap-3 text-xs">
             <div className="flex items-center gap-1.5">
@@ -324,9 +468,19 @@ export const CalendarPage = () => {
             <div className="p-2 text-xs font-medium text-muted-foreground">
               Time
             </div>
-            {WEEKDAYS.map(day => (
-              <div key={day} className="p-2 text-xs font-medium text-center">
-                {day}
+            {WEEKDAYS.map((day, index) => (
+              <div 
+                key={day} 
+                className={`flex flex-col p-2 text-xs font-medium text-center ${
+                  isSameDay(weekDates[index], new Date()) ? 'bg-primary/5' : ''
+                }`}
+              >
+                <span className="text-primary font-semibold">
+                  {format(weekDates[index], 'd')}
+                </span>
+                <span className="text-muted-foreground mt-0.5">
+                  {day}
+                </span>
               </div>
             ))}
           </div>
@@ -347,39 +501,42 @@ export const CalendarPage = () => {
                       <div
                         key={slotId}
                         data-slot-id={slotId}
-                        className={`time-slot group relative p-1.5 transition-colors cursor-pointer ${
+                        className={`time-slot group relative inset-0 transition-colors cursor-pointer ${
                           isInSelection
                             ? mouseDown?.button === 2
-                              ? 'bg-destructive/20'
-                              : 'bg-primary/20'
+                              ? 'bg-destructive/60'
+                              : 'bg-success/60'
                             : slot?.isAvailable
-                              ? 'bg-success/10 hover:bg-success/20'
+                              ? 'bg-success/20 hover:bg-success/30'
                               : slot
-                                ? 'bg-destructive/10 hover:bg-destructive/20'
+                                ? 'bg-destructive/20 hover:bg-destructive/30'
                                 : 'hover:bg-secondary/10'
                         }`}
                       >
-                        {isInSelection && mouseDown?.button === 2 && slot && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-destructive/10">
-                            <CheckCircle2 className="w-4 h-4 text-destructive" />
-                          </div>
-                        )}
-                        {(!isInSelection || mouseDown?.button !== 2) && (
-                          <>
-                            {slot?.label && (
-                              <div className="text-[10px] font-medium bg-secondary/20 text-foreground px-1.5 py-0.5 rounded">
-                                {slot.label}
-                              </div>
-                            )}
-                            {slot?.notes && (
-                              <div className="absolute inset-x-1.5 bottom-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="text-[10px] text-muted-foreground line-clamp-1">
-                                  {slot.notes}
+                        <div className="absolute inset-0 p-1.5">
+                          {isInSelection && mouseDown?.button === 2 && slot && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-destructive/30">
+                              <CheckCircle2 className="w-4 h-4 text-destructive" />
+                            </div>
+                          )}
+                          {(!isInSelection || mouseDown?.button !== 2) && slot?.isAvailable && (
+                            <>
+                              {slot.label && (
+                                <div className="flex items-center gap-1 text-[10px] font-medium bg-secondary/20 text-foreground px-1.5 py-0.5 rounded">
+                                  <Tag className="w-3 h-3" />
+                                  {slot.label}
                                 </div>
-                              </div>
-                            )}
-                          </>
-                        )}
+                              )}
+                              {slot.notes && (
+                                <div className="absolute inset-x-1.5 bottom-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="text-[10px] text-muted-foreground line-clamp-1">
+                                    {slot.notes}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
