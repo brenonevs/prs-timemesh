@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MainLayout } from '../../layouts/MainLayout';
-import { Clock, Tag, X, AlertCircle, Trash2 } from 'lucide-react';
+import { Clock, Tag, X, AlertCircle, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -13,12 +13,6 @@ interface TimeSlot {
   isAvailable: boolean;
   label?: string;
   notes?: string;
-}
-
-interface ContextMenu {
-  x: number;
-  y: number;
-  slot: TimeSlot;
 }
 
 interface SlotModalProps {
@@ -141,123 +135,99 @@ export const CalendarPage = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [showSlotModal, setShowSlotModal] = useState(false);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [selectionStart, setSelectionStart] = useState<{ day: string; hour: number } | null>(null);
-  const [selectionEnd, setSelectionEnd] = useState<{ day: string; hour: number } | null>(null);
-  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [mouseDown, setMouseDown] = useState<{ button: number; day: string; hour: number } | null>(null);
+  const [currentHover, setCurrentHover] = useState<{ day: string; hour: number } | null>(null);
   
   const gridRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (contextMenu) {
-        setContextMenu(null);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [contextMenu]);
-
   const getSlotFromElement = (element: HTMLElement | null): { day: string; hour: number } | null => {
-    if (!element?.parentElement) return null;
+    if (!element?.closest('.time-slot')) return null;
     
-    const dayIndex = Array.from(element.parentElement.children || []).indexOf(element) - 1;
-    if (dayIndex < 0) return null;
+    const slotId = element.closest('.time-slot')?.getAttribute('data-slot-id');
+    if (!slotId) return null;
     
-    const hourIndex = element.parentElement.parentElement
-      ? Array.from(element.parentElement.parentElement.children || [])
-        .indexOf(element.parentElement as HTMLElement)
-      : -1;
-    
-    if (hourIndex < 0) return null;
-    
+    const [day, hour] = slotId.split('-');
     return {
-      day: WEEKDAYS[dayIndex],
-      hour: HOURS[hourIndex]
+      day,
+      hour: parseInt(hour, 10)
     };
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only handle left clicks
-    
     const target = e.target as HTMLElement;
-    const slotElement = target.closest('.time-slot');
-    if (!slotElement) return;
+    const slot = getSlotFromElement(target);
+    if (!slot) return;
     
-    const slot = getSlotFromElement(slotElement as HTMLElement);
-    if (slot) {
-      setIsSelecting(true);
-      setSelectionStart(slot);
-      setSelectionEnd(slot);
-    }
+    setMouseDown({
+      button: e.button,
+      ...slot
+    });
+    setCurrentHover(slot);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isSelecting) return;
+    if (!mouseDown) return;
     
     const target = e.target as HTMLElement;
-    const slotElement = target.closest('.time-slot');
-    if (!slotElement) return;
+    const slot = getSlotFromElement(target);
+    if (!slot) return;
     
-    const slot = getSlotFromElement(slotElement as HTMLElement);
-    if (slot) {
-      setSelectionEnd(slot);
-    }
+    setCurrentHover(slot);
   };
 
   const handleMouseUp = () => {
-    if (isSelecting && selectionStart && selectionEnd) {
-      const startDayIndex = WEEKDAYS.indexOf(selectionStart.day);
-      const endDayIndex = WEEKDAYS.indexOf(selectionEnd.day);
-      const startHourIndex = HOURS.indexOf(selectionStart.hour);
-      const endHourIndex = HOURS.indexOf(selectionEnd.hour);
-      
-      const minDayIndex = Math.min(startDayIndex, endDayIndex);
-      const maxDayIndex = Math.max(startDayIndex, endDayIndex);
-      const minHourIndex = Math.min(startHourIndex, endHourIndex);
-      const maxHourIndex = Math.max(startHourIndex, endHourIndex);
-      
-      const selectedSlots: TimeSlot[] = [];
-      
-      for (let dayIndex = minDayIndex; dayIndex <= maxDayIndex; dayIndex++) {
-        for (let hourIndex = minHourIndex; hourIndex <= maxHourIndex; hourIndex++) {
-          const day = WEEKDAYS[dayIndex];
-          const hour = HOURS[hourIndex];
-          const slotId = `${day}-${hour}`;
-          
-          const existingSlot = timeSlots.find(slot => slot.id === slotId) || {
-            id: slotId,
-            day,
-            hour,
-            isAvailable: true
-          };
-          
-          selectedSlots.push(existingSlot);
-        }
-      }
-      
-      setSelectedSlots(selectedSlots);
+    if (!mouseDown || !currentHover) {
+      setMouseDown(null);
+      setCurrentHover(null);
+      return;
+    }
+
+    const slots = getSelectedSlots(mouseDown, currentHover);
+    
+    if (mouseDown.button === 2) { // Right click - delete
+      setTimeSlots(prev => prev.filter(slot => 
+        !slots.some(s => s.id === slot.id)
+      ));
+    } else if (mouseDown.button === 0) { // Left click - add/edit
+      setSelectedSlots(slots);
       setShowSlotModal(true);
     }
+
+    setMouseDown(null);
+    setCurrentHover(null);
+  };
+
+  const getSelectedSlots = (start: { day: string; hour: number }, end: { day: string; hour: number }) => {
+    const startDayIndex = WEEKDAYS.indexOf(start.day);
+    const endDayIndex = WEEKDAYS.indexOf(end.day);
+    const startHourIndex = HOURS.indexOf(start.hour);
+    const endHourIndex = HOURS.indexOf(end.hour);
     
-    setIsSelecting(false);
-    setSelectionStart(null);
-    setSelectionEnd(null);
-  };
-
-  const handleContextMenu = (e: React.MouseEvent, slot: TimeSlot) => {
-    e.preventDefault();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      slot
-    });
-  };
-
-  const removeSlot = (slot: TimeSlot) => {
-    setTimeSlots(prevSlots => prevSlots.filter(s => s.id !== slot.id));
-    setContextMenu(null);
+    const minDayIndex = Math.min(startDayIndex, endDayIndex);
+    const maxDayIndex = Math.max(startDayIndex, endDayIndex);
+    const minHourIndex = Math.min(startHourIndex, endHourIndex);
+    const maxHourIndex = Math.max(startHourIndex, endHourIndex);
+    
+    const selectedSlots: TimeSlot[] = [];
+    
+    for (let dayIndex = minDayIndex; dayIndex <= maxDayIndex; dayIndex++) {
+      for (let hourIndex = minHourIndex; hourIndex <= maxHourIndex; hourIndex++) {
+        const day = WEEKDAYS[dayIndex];
+        const hour = HOURS[hourIndex];
+        const slotId = `${day}-${hour}`;
+        
+        const existingSlot = timeSlots.find(slot => slot.id === slotId) || {
+          id: slotId,
+          day,
+          hour,
+          isAvailable: true
+        };
+        
+        selectedSlots.push(existingSlot);
+      }
+    }
+    
+    return selectedSlots;
   };
 
   const saveSlotChanges = (data: { label?: string; notes?: string; isAvailable: boolean }) => {
@@ -292,13 +262,13 @@ export const CalendarPage = () => {
     return timeSlots.find(slot => slot.id === `${day}-${hour}`);
   };
 
-  const isSlotSelected = (day: string, hour: number) => {
-    if (!isSelecting || !selectionStart || !selectionEnd) return false;
+  const isSlotInSelection = (day: string, hour: number) => {
+    if (!mouseDown || !currentHover) return false;
     
-    const startDayIndex = WEEKDAYS.indexOf(selectionStart.day);
-    const endDayIndex = WEEKDAYS.indexOf(selectionEnd.day);
-    const startHourIndex = HOURS.indexOf(selectionStart.hour);
-    const endHourIndex = HOURS.indexOf(selectionEnd.hour);
+    const startDayIndex = WEEKDAYS.indexOf(mouseDown.day);
+    const endDayIndex = WEEKDAYS.indexOf(currentHover.day);
+    const startHourIndex = HOURS.indexOf(mouseDown.hour);
+    const endHourIndex = HOURS.indexOf(currentHover.hour);
     
     const dayIndex = WEEKDAYS.indexOf(day);
     const hourIndex = HOURS.indexOf(hour);
@@ -370,39 +340,45 @@ export const CalendarPage = () => {
                   </div>
                   {WEEKDAYS.map(day => {
                     const slot = getSlotInfo(day, hour);
-                    const isSelected = isSlotSelected(day, hour);
-                    const slotData = slot || {
-                      id: `${day}-${hour}`,
-                      day,
-                      hour,
-                      isAvailable: true
-                    };
+                    const isInSelection = isSlotInSelection(day, hour);
+                    const slotId = `${day}-${hour}`;
                     
                     return (
                       <div
-                        key={`${day}-${hour}`}
+                        key={slotId}
+                        data-slot-id={slotId}
                         className={`time-slot group relative p-1.5 transition-colors cursor-pointer ${
-                          isSelected
-                            ? 'bg-primary/20'
+                          isInSelection
+                            ? mouseDown?.button === 2
+                              ? 'bg-destructive/20'
+                              : 'bg-primary/20'
                             : slot?.isAvailable
-                            ? 'bg-success/10 hover:bg-success/20'
-                            : slot
-                            ? 'bg-destructive/10 hover:bg-destructive/20'
-                            : 'hover:bg-secondary/10'
+                              ? 'bg-success/10 hover:bg-success/20'
+                              : slot
+                                ? 'bg-destructive/10 hover:bg-destructive/20'
+                                : 'hover:bg-secondary/10'
                         }`}
-                        onContextMenu={(e) => handleContextMenu(e, slotData)}
                       >
-                        {slot?.label && (
-                          <div className="text-[10px] font-medium bg-secondary/20 text-foreground px-1.5 py-0.5 rounded">
-                            {slot.label}
+                        {isInSelection && mouseDown?.button === 2 && slot && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-destructive/10">
+                            <CheckCircle2 className="w-4 h-4 text-destructive" />
                           </div>
                         )}
-                        {slot?.notes && (
-                          <div className="absolute inset-x-1.5 bottom-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="text-[10px] text-muted-foreground line-clamp-1">
-                              {slot.notes}
-                            </div>
-                          </div>
+                        {(!isInSelection || mouseDown?.button !== 2) && (
+                          <>
+                            {slot?.label && (
+                              <div className="text-[10px] font-medium bg-secondary/20 text-foreground px-1.5 py-0.5 rounded">
+                                {slot.label}
+                              </div>
+                            )}
+                            {slot?.notes && (
+                              <div className="absolute inset-x-1.5 bottom-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="text-[10px] text-muted-foreground line-clamp-1">
+                                  {slot.notes}
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     );
@@ -413,26 +389,6 @@ export const CalendarPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Context Menu */}
-      {contextMenu && (
-        <div
-          className="fixed z-50 bg-card rounded-lg shadow-lg border border-border py-1 animate-fadeIn"
-          style={{
-            top: contextMenu.y,
-            left: contextMenu.x,
-            transform: 'translate(-50%, -50%)'
-          }}
-        >
-          <button
-            className="w-full px-4 py-2 text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
-            onClick={() => removeSlot(contextMenu.slot)}
-          >
-            <Trash2 className="w-4 h-4" />
-            Remove Slot
-          </button>
-        </div>
-      )}
 
       {/* Slot Modal */}
       {showSlotModal && (
