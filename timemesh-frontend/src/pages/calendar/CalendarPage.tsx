@@ -5,9 +5,10 @@ import { Button } from '../../components/ui/Button';
 import { DayPicker } from 'react-day-picker';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import 'react-day-picker/dist/style.css';
+import api from '../../services/api';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 6:00 AM to 10:00 PM
+const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); 
 
 interface TimeSlot {
   id: string;
@@ -295,7 +296,7 @@ export const CalendarPage = () => {
     setCurrentHover(slot);
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = async () => {
     if (!mouseDown || !currentHover) {
       setMouseDown(null);
       setCurrentHover(null);
@@ -304,11 +305,33 @@ export const CalendarPage = () => {
 
     const slots = getSelectedSlots(mouseDown, currentHover);
     
-    if (mouseDown.button === 2) {
-      setTimeSlots(prev => prev.filter(slot => 
-        !slots.some(s => s.id === slot.id)
-      ));
-    } else if (mouseDown.button === 0) {
+    if (mouseDown.button === 2) { 
+      try {
+        for (const slot of slots) {
+          const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+          const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
+          const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
+
+          const response = await api.get('/api/availability/slots/', {
+            params: {
+              date: formattedDate,
+              start_time: startTime,
+              end_time: endTime
+            }
+          });
+
+          if (response.data && response.data.length > 0) {
+            await api.delete(`/api/availability/slots/${response.data[0].id}/`);
+          }
+        }
+
+        setTimeSlots(prev => prev.filter(slot => 
+          !slots.some(s => s.id === slot.id)
+        ));
+      } catch (error) {
+        console.error('Erro ao remover horários:', error);
+      }
+    } else if (mouseDown.button === 0) { 
       setSelectedSlots(slots);
       
       if (!isDragging) {
@@ -358,27 +381,47 @@ export const CalendarPage = () => {
     return selectedSlots;
   };
 
-  const saveSlotChanges = (data: { label?: string; notes?: string; isAvailable: boolean }) => {
-    setTimeSlots(prevSlots => {
-      const newSlots = [...prevSlots];
-      
-      selectedSlots.forEach(selectedSlot => {
-        const existingSlotIndex = newSlots.findIndex(slot => slot.id === selectedSlot.id);
-        const updatedSlot = {
-          ...selectedSlot,
-          ...data,
-          date: selectedDate.toISOString(),
-        };
-        
-        if (existingSlotIndex !== -1) {
-          newSlots[existingSlotIndex] = updatedSlot;
-        } else {
-          newSlots.push(updatedSlot);
+  const saveSlotChanges = async (data: { label?: string; notes?: string; isAvailable: boolean }) => {
+    try {
+      for (const slot of selectedSlots) {
+        if (data.isAvailable) {
+          const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+          
+          const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
+          const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
+
+          await api.post('/api/availability/slots/', {
+            date: formattedDate,
+            start_time: startTime,
+            end_time: endTime,
+            title: data.label || 'Disponível'
+          });
         }
+      }
+
+      setTimeSlots(prevSlots => {
+        const newSlots = [...prevSlots];
+        
+        selectedSlots.forEach(selectedSlot => {
+          const existingSlotIndex = newSlots.findIndex(slot => slot.id === selectedSlot.id);
+          const updatedSlot = {
+            ...selectedSlot,
+            ...data,
+            date: selectedDate.toISOString(),
+          };
+          
+          if (existingSlotIndex !== -1) {
+            newSlots[existingSlotIndex] = updatedSlot;
+          } else {
+            newSlots.push(updatedSlot);
+          }
+        });
+        
+        return newSlots;
       });
-      
-      return newSlots;
-    });
+    } catch (error) {
+      console.error('Erro ao salvar horários:', error);
+    }
   };
 
   const formatHour = (hour: number) => {
