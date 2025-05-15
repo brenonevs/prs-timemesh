@@ -14,13 +14,29 @@ from collections import defaultdict
 from groups.models import Group, GroupMembership
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+import datetime
 
 class AvailabilitySlotViewSet(viewsets.ModelViewSet):
     serializer_class = AvailabilitySlotSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return AvailabilitySlot.objects.filter(user=self.request.user)
+        queryset = AvailabilitySlot.objects.filter(user=self.request.user)
+        
+        date = self.request.query_params.get('date')
+        start_time = self.request.query_params.get('start_time')
+        end_time = self.request.query_params.get('end_time')
+        
+        if date:
+            queryset = queryset.filter(date=date)
+        
+        if start_time:
+            queryset = queryset.filter(start_time__gte=start_time)
+            
+        if end_time:
+            queryset = queryset.filter(end_time__lte=end_time)
+            
+        return queryset
     
     def perform_create(self, serializer):
         user = self.request.user
@@ -29,72 +45,54 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
         end_time = serializer.validated_data['end_time']
         title = serializer.validated_data['title']
 
-        existing_slots = AvailabilitySlot.objects.filter(
-            user=user,
-            date=date
-        )
-
-        overlapping_slots = []
-        for slot in existing_slots:
-            if (start_time <= slot.end_time and end_time >= slot.start_time):
-                overlapping_slots.append(slot)
-
-        if overlapping_slots:
-            # Para cada slot sobreposto, recorta em torno do novo slot
-            for slot in overlapping_slots:
-                # Primeiro deleta o slot original
-                slot.delete()
-                
-                # Cria slots recortados
-                if slot.start_time < start_time:
-                    # Cria slot antes do novo slot
-                    AvailabilitySlot.objects.create(
-                        user=user,
-                        date=date,
-                        start_time=slot.start_time,
-                        end_time=start_time,
-                        title=slot.title
-                    )
-                if slot.end_time > end_time:
-                    # Cria slot depois do novo slot
-                    AvailabilitySlot.objects.create(
-                        user=user,
-                        date=date,
-                        start_time=end_time,
-                        end_time=slot.end_time,
-                        title=slot.title
-                    )
+        current_time = start_time
+        while current_time < end_time:
+            next_time = (datetime.datetime.combine(datetime.date.today(), current_time) + 
+                        datetime.timedelta(hours=1)).time()
             
-            # Cria o novo slot
-            serializer.save(user=user)
+            if next_time > end_time:
+                next_time = end_time
 
-            # Junta slots contíguos com o mesmo título
-            slots = AvailabilitySlot.objects.filter(
+            existing_slots = AvailabilitySlot.objects.filter(
                 user=user,
                 date=date
-            ).order_by('start_time')
+            )
 
-            i = 0
-            while i < len(slots) - 1:
-                current = slots[i]
-                next_slot = slots[i + 1]
-                
-                if (current.end_time == next_slot.start_time and 
-                    current.title == next_slot.title):
-                    # Atualiza o slot atual para cobrir ambos
-                    current.end_time = next_slot.end_time
-                    current.save()
-                    # Deleta o próximo slot
-                    next_slot.delete()
-                    # Atualiza a lista de slots
-                    slots = list(AvailabilitySlot.objects.filter(
-                        user=user,
-                        date=date
-                    ).order_by('start_time'))
-                else:
-                    i += 1
-        else:
-            serializer.save(user=user)
+            overlapping_slots = []
+            for slot in existing_slots:
+                if (current_time <= slot.end_time and next_time >= slot.start_time):
+                    overlapping_slots.append(slot)
+
+            if overlapping_slots:
+                for slot in overlapping_slots:
+                    slot.delete()
+                    
+                    if slot.start_time < current_time:
+                        AvailabilitySlot.objects.create(
+                            user=user,
+                            date=date,
+                            start_time=slot.start_time,
+                            end_time=current_time,
+                            title=slot.title
+                        )
+                    if slot.end_time > next_time:
+                        AvailabilitySlot.objects.create(
+                            user=user,
+                            date=date,
+                            start_time=next_time,
+                            end_time=slot.end_time,
+                            title=slot.title
+                        )
+
+            AvailabilitySlot.objects.create(
+                user=user,
+                date=date,
+                start_time=current_time,
+                end_time=next_time,
+                title=title
+            )
+
+            current_time = next_time
 
 class CommonAvailabilityView(generics.CreateAPIView):
     serializer_class = CommonAvailabilityRequestSerializer
