@@ -45,6 +45,8 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
         end_time = serializer.validated_data['end_time']
         title = serializer.validated_data['title']
         is_available = serializer.validated_data.get('is_available', True)
+        if not is_available:
+            title = 'Ocupado'
 
         current_time = start_time
         while current_time < end_time:
