@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TelescopeIcon as EnvelopeIcon, DoorClosedIcon as LockClosedIcon } from 'lucide-react';
+import { TelescopeIcon as EnvelopeIcon, DoorClosedIcon as LockClosedIcon, UserIcon } from 'lucide-react';
 import { SocialLoginButtons } from './SocialLoginButtons';
 import { InputField } from '../ui/form/InputField';
 import { Button } from '../ui/Button';
@@ -33,11 +33,10 @@ export const Login = () => {
     setIsLoading(true);
     
     try {
-      const username = formData.username.split('@')[0];
-      const { access, refresh } = await authService.login(username, formData.password);
+      const { access, refresh } = await authService.login(formData.username, formData.password);
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
-      await login(username, formData.password);
+      await login(formData.username, formData.password);
       navigate('/dashboard');
     } catch (err: any) {
       setError('Usuário ou senha inválidos');
@@ -62,10 +61,10 @@ export const Login = () => {
       
       <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
         <InputField
-          icon={<EnvelopeIcon size={18} />}
+          icon={<UserIcon size={18} />}
           name="username"
-          type="email"
-          placeholder="Email address"
+          type="text"
+          placeholder="Username"
           value={formData.username}
           onChange={handleChange}
           required

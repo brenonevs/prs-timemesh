@@ -11,8 +11,8 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (name: string, username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -54,7 +54,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           });
           setIsAuthenticated(true);
         } catch (error) {
-          
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('user');
@@ -98,13 +97,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
   
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, username: string, email: string, password: string) => {
     setIsLoading(true);
     try {
       const [first_name, ...rest] = name.trim().split(' ');
       const last_name = rest.join(' ') || '-';
-
-      const username = email.split('@')[0];
 
       const response = await authService.register({
         username,

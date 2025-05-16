@@ -25,7 +25,17 @@ class UserRegistrationView(generics.CreateAPIView):
                     "last_name": user.last_name
                 }
             }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        if 'email' in serializer.errors:
+            return Response({
+                "error": "Este e-mail já está cadastrado no sistema.",
+                "details": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        return Response({
+            "error": "Erro ao registrar usuário.",
+            "details": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
     
 class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]

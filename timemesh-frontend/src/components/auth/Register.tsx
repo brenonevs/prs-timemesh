@@ -5,7 +5,7 @@ import { SocialLoginButtons } from './SocialLoginButtons';
 import { InputField } from '../ui/form/InputField';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { authService } from '../services/auth';
+import { authService } from '../../services/auth';
 
 export const Register = () => {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ export const Register = () => {
   
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -32,7 +33,7 @@ export const Register = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('As senhas não coincidem');
       return;
     }
     
@@ -40,12 +41,28 @@ export const Register = () => {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await register(formData.name, formData.email, formData.password);
+      await register(formData.name, formData.username, formData.email, formData.password);
       navigate('/dashboard');
-    } catch (err) {
-      setError('Registration failed. Please try again.');
+    } catch (err: any) {
+      const errorData = err.response?.data;
+      
+      if (errorData?.details) {
+        const { username, email } = errorData.details;
+        
+        if (username && email) {
+          setError('Este e-mail e nome de usuário já estão em uso.');
+        } else if (email) {
+          setError('Este e-mail já está em uso.');
+        } else if (username) {
+          setError('Este nome de usuário já está em uso.');
+        } else {
+          setError(errorData.error || 'Erro ao registrar. Por favor, tente novamente.');
+        }
+      } else if (errorData?.error) {
+        setError(errorData.error);
+      } else {
+        setError('Erro ao registrar. Por favor, tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +89,16 @@ export const Register = () => {
           type="text"
           placeholder="Full name"
           value={formData.name}
+          onChange={handleChange}
+          required
+        />
+
+        <InputField
+          icon={<UserIcon size={18} />}
+          name="username"
+          type="text"
+          placeholder="Username"
+          value={formData.username}
           onChange={handleChange}
           required
         />

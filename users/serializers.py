@@ -10,10 +10,21 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = ('username', 'password', 'password2', 'email', 'first_name', 'last_name')
         extra_kwargs = {
+            'username': {'required': True},
             'first_name': {'required': True},
             'last_name': {'required': True},
             'email': {'required': True}
         }
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Este nome de usuário já está em uso.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Este e-mail já está em uso.")
+        return value
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
