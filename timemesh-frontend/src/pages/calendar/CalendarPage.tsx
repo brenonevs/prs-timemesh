@@ -194,6 +194,7 @@ const DateSelector = ({ selectedDate, onDateChange }) => {
             mode="single"
             selected={selectedDate}
             onSelect={(date) => {
+              console.log('Data selecionada:', date);
               if (date) {
                 onDateChange(date);
                 setIsCalendarOpen(false);
@@ -385,7 +386,9 @@ export const CalendarPage = () => {
     try {
       for (const slot of selectedSlots) {
         if (data.isAvailable) {
-          const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+          const dayIndex = WEEKDAYS.indexOf(slot.day);
+          const slotDate = weekDates[dayIndex];
+          const formattedDate = format(slotDate, 'yyyy-MM-dd');
           
           const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
           const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
@@ -514,6 +517,7 @@ export const CalendarPage = () => {
             {WEEKDAYS.map((day, index) => (
               <div 
                 key={day} 
+                onClick={() => setSelectedDate(weekDates[index])}
                 className={`flex flex-col p-2 text-xs font-medium text-center ${
                   isSameDay(weekDates[index], new Date()) ? 'bg-primary/5' : ''
                 }`}
