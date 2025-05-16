@@ -35,8 +35,8 @@ export const Login = () => {
     try {
       const username = formData.username.split('@')[0];
       const { access, refresh } = await authService.login(username, formData.password);
-      localStorage.setItem('accessToken', access);
-      localStorage.setItem('refreshToken', refresh);
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
       await login(username, formData.password);
       navigate('/dashboard');
     } catch (err: any) {

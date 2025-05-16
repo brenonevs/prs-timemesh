@@ -6,6 +6,7 @@ import { DayPicker } from 'react-day-picker';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import 'react-day-picker/dist/style.css';
 import api from '../../services/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); 
@@ -230,8 +231,17 @@ const DateSelector = ({ selectedDate, onDateChange }) => {
   );
 };
 
+const fetchSlots = async () => {
+  const response = await api.get('/api/availability/slots/');
+  return response.data;
+};
+
 export const CalendarPage = () => {
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const { data: timeSlots = [], isLoading, isError } = useQuery({
+    queryKey: ['slots'],
+    queryFn: fetchSlots,
+  });
+  const queryClient = useQueryClient();
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [mouseDown, setMouseDown] = useState<{ button: number; day: string; hour: number; x: number; y: number } | null>(null);
@@ -309,7 +319,9 @@ export const CalendarPage = () => {
     if (mouseDown.button === 2) { 
       try {
         for (const slot of slots) {
-          const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+          const dayIndex = WEEKDAYS.indexOf(slot.day);
+          const slotDate = weekDates[dayIndex];
+          const formattedDate = format(slotDate, 'yyyy-MM-dd');
           const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
           const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
 
@@ -325,10 +337,7 @@ export const CalendarPage = () => {
             await api.delete(`/api/availability/slots/${response.data[0].id}/`);
           }
         }
-
-        setTimeSlots(prev => prev.filter(slot => 
-          !slots.some(s => s.id === slot.id)
-        ));
+        queryClient.invalidateQueries({ queryKey: ['slots'] });
       } catch (error) {
         console.error('Erro ao remover horários:', error);
       }
@@ -399,27 +408,7 @@ export const CalendarPage = () => {
           is_available: data.isAvailable
         });
       }
-
-      setTimeSlots(prevSlots => {
-        const newSlots = [...prevSlots];
-        
-        selectedSlots.forEach(selectedSlot => {
-          const existingSlotIndex = newSlots.findIndex(slot => slot.id === selectedSlot.id);
-          const updatedSlot = {
-            ...selectedSlot,
-            ...data,
-            date: selectedDate.toISOString(),
-          };
-          
-          if (existingSlotIndex !== -1) {
-            newSlots[existingSlotIndex] = updatedSlot;
-          } else {
-            newSlots.push(updatedSlot);
-          }
-        });
-        
-        return newSlots;
-      });
+      queryClient.invalidateQueries({ queryKey: ['slots'] });
     } catch (error) {
       console.error('Erro ao salvar horários:', error);
     }
@@ -463,6 +452,9 @@ export const CalendarPage = () => {
   };
 
   const weekDates = getWeekDates();
+
+  if (isLoading) return <div>Carregando agenda...</div>;
+  if (isError) return <div>Erro ao carregar agenda.</div>;
 
   return (
     <MainLayout>
@@ -537,8 +529,11 @@ export const CalendarPage = () => {
                   <div className="p-2 text-xs text-muted-foreground">
                     {formatHour(hour)}
                   </div>
-                  {WEEKDAYS.map(day => {
-                    const slot = getSlotInfo(day, hour);
+                  {WEEKDAYS.map((day, colIdx) => {
+                    const slot = timeSlots.find((s: any) =>
+                      s.date === format(weekDates[colIdx], 'yyyy-MM-dd') &&
+                      s.start_time === `${hour.toString().padStart(2, '0')}:00:00`
+                    );
                     const isInSelection = isSlotInSelection(day, hour);
                     const slotId = `${day}-${hour}`;
                     
@@ -551,11 +546,11 @@ export const CalendarPage = () => {
                             ? mouseDown?.button === 2
                               ? 'bg-destructive/60'
                               : 'bg-success/60'
-                            : slot?.isAvailable
-                              ? 'bg-success/20 hover:bg-success/30'
-                              : slot
-                                ? 'bg-destructive/20 hover:bg-destructive/30'
-                                : 'hover:bg-secondary/10'
+                            : slot
+                              ? slot.is_available
+                                ? 'bg-success/20 hover:bg-success/30'
+                                : 'bg-destructive/20 hover:bg-destructive/30'
+                              : 'hover:bg-secondary/10'
                         }`}
                       >
                         <div className="absolute inset-0 p-1.5">
@@ -564,12 +559,12 @@ export const CalendarPage = () => {
                               <CheckCircle2 className="w-4 h-4 text-destructive" />
                             </div>
                           )}
-                          {(!isInSelection || mouseDown?.button !== 2) && slot?.isAvailable && (
+                          {(!isInSelection || mouseDown?.button !== 2) && slot && (
                             <>
-                              {slot.label && (
+                              {slot.title && (
                                 <div className="flex items-center gap-1 text-[10px] font-medium bg-secondary/20 text-foreground px-1.5 py-0.5 rounded">
                                   <Tag className="w-3 h-3" />
-                                  {slot.label}
+                                  {slot.title}
                                 </div>
                               )}
                               {slot.notes && (
