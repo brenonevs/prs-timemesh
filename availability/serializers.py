@@ -4,7 +4,7 @@ from .models import AvailabilitySlot
 class AvailabilitySlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = AvailabilitySlot
-        fields = ['id', 'user', 'date', 'start_time', 'end_time', 'title']
+        fields = ['id', 'user', 'date', 'start_time', 'end_time', 'title', 'is_available']
         read_only_fields = ['id', 'user']
 
     def validate(self, attrs):

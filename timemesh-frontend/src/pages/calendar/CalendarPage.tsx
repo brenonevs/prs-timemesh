@@ -385,21 +385,19 @@ export const CalendarPage = () => {
   const saveSlotChanges = async (data: { label?: string; notes?: string; isAvailable: boolean }) => {
     try {
       for (const slot of selectedSlots) {
-        if (data.isAvailable) {
-          const dayIndex = WEEKDAYS.indexOf(slot.day);
-          const slotDate = weekDates[dayIndex];
-          const formattedDate = format(slotDate, 'yyyy-MM-dd');
-          
-          const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
-          const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
+        const dayIndex = WEEKDAYS.indexOf(slot.day);
+        const slotDate = weekDates[dayIndex];
+        const formattedDate = format(slotDate, 'yyyy-MM-dd');
+        const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
+        const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
 
-          await api.post('/api/availability/slots/', {
-            date: formattedDate,
-            start_time: startTime,
-            end_time: endTime,
-            title: data.label || 'Disponível'
-          });
-        }
+        await api.post('/api/availability/slots/', {
+          date: formattedDate,
+          start_time: startTime,
+          end_time: endTime,
+          title: data.label || 'Disponível',
+          is_available: data.isAvailable
+        });
       }
 
       setTimeSlots(prevSlots => {

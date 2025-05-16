@@ -44,6 +44,7 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
         start_time = serializer.validated_data['start_time']
         end_time = serializer.validated_data['end_time']
         title = serializer.validated_data['title']
+        is_available = serializer.validated_data.get('is_available', True)
 
         current_time = start_time
         while current_time < end_time:
@@ -73,7 +74,8 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
                             date=date,
                             start_time=slot.start_time,
                             end_time=current_time,
-                            title=slot.title
+                            title=slot.title,
+                            is_available=slot.is_available
                         )
                     if slot.end_time > next_time:
                         AvailabilitySlot.objects.create(
@@ -81,7 +83,8 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
                             date=date,
                             start_time=next_time,
                             end_time=slot.end_time,
-                            title=slot.title
+                            title=slot.title,
+                            is_available=slot.is_available
                         )
 
             AvailabilitySlot.objects.create(
@@ -89,7 +92,8 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
                 date=date,
                 start_time=current_time,
                 end_time=next_time,
-                title=title
+                title=title,
+                is_available=is_available
             )
 
             current_time = next_time
