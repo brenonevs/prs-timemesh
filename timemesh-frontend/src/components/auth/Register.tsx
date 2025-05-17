@@ -33,7 +33,7 @@ export const Register = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      setError('As senhas não coincidem');
+      setError('Passwords do not match');
       return;
     }
     
@@ -50,18 +50,18 @@ export const Register = () => {
         const { username, email } = errorData.details;
         
         if (username && email) {
-          setError('Este e-mail e nome de usuário já estão em uso.');
+          setError('This email and username are already in use.');
         } else if (email) {
-          setError('Este e-mail já está em uso.');
+          setError('This email is already in use.');
         } else if (username) {
-          setError('Este nome de usuário já está em uso.');
+          setError('This username is already in use.');
         } else {
-          setError(errorData.error || 'Erro ao registrar. Por favor, tente novamente.');
+          setError(errorData.error || 'Registration failed. Please try again.');
         }
       } else if (errorData?.error) {
         setError(errorData.error);
       } else {
-        setError('Erro ao registrar. Por favor, tente novamente.');
+        setError('Registration failed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -91,6 +91,7 @@ export const Register = () => {
           value={formData.name}
           onChange={handleChange}
           required
+          autoComplete="name"
         />
 
         <InputField
@@ -101,6 +102,7 @@ export const Register = () => {
           value={formData.username}
           onChange={handleChange}
           required
+          autoComplete="username"
         />
         
         <InputField
@@ -111,6 +113,7 @@ export const Register = () => {
           value={formData.email}
           onChange={handleChange}
           required
+          autoComplete="email"
         />
         
         <InputField
@@ -121,6 +124,7 @@ export const Register = () => {
           value={formData.password}
           onChange={handleChange}
           required
+          autoComplete="new-password"
         />
         
         <InputField
@@ -131,6 +135,7 @@ export const Register = () => {
           value={formData.confirmPassword}
           onChange={handleChange}
           required
+          autoComplete="new-password"
         />
         
         {error && (

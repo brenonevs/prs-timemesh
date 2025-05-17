@@ -42,7 +42,7 @@ export const Login = () => {
       if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
-        setError('Usuário ou senha inválidos');
+        setError('Invalid username or password');
       }
     } finally {
       setIsLoading(false);
@@ -68,10 +68,11 @@ export const Login = () => {
           icon={<UserIcon size={18} />}
           name="identifier"
           type="text"
-          placeholder="Email ou nome de usuário"
+          placeholder="Email or username"
           value={formData.identifier}
           onChange={handleChange}
           required
+          autoComplete="username"
         />
         
         <InputField
@@ -82,6 +83,7 @@ export const Login = () => {
           value={formData.password}
           onChange={handleChange}
           required
+          autoComplete="current-password"
         />
         
         <div className="flex items-center justify-between mt-1 mb-2">

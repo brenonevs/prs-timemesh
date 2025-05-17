@@ -31,11 +31,11 @@ export const SuccessPage = () => {
           </div>
           
           <h1 className="text-2xl font-bold text-foreground mb-2">
-            Conta criada com sucesso!
+            Account created successfully!
           </h1>
           
           <p className="text-muted-foreground mb-8">
-            Sua conta foi criada com sucesso. Você será redirecionado para a página de login em alguns segundos.
+            Your account has been created successfully. You will be redirected to the login page in a few seconds.
           </p>
 
           <div className="w-full space-y-4">
@@ -44,12 +44,12 @@ export const SuccessPage = () => {
               className="w-full"
               onClick={() => navigate('/login')}
             >
-              Ir para o login
+              Go to login
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
 
             <div className="text-sm text-muted-foreground">
-              Redirecionando em <span className="font-medium text-foreground">{countdown}</span> segundos...
+              Redirecting in <span className="font-medium text-foreground">{countdown}</span> seconds...
             </div>
           </div>
         </div>

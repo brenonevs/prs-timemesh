@@ -51,6 +51,7 @@ export default {
         shake: "shake 0.5s cubic-bezier(.36,.07,.19,.97) both",
         fadeIn: "fadeIn 0.3s ease-out",
         fadeInUp: "fadeInUp 0.3s ease-out",
+        "spin-once": "spin-once 0.5s ease-in-out",
       },
       keyframes: {
         "pulse": {
@@ -83,6 +84,10 @@ export default {
             opacity: "1",
             transform: "translateY(0)",
           },
+        },
+        "spin-once": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
         },
       },
     },
