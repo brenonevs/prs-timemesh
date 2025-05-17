@@ -6,6 +6,8 @@ from rest_framework import status
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -36,6 +38,37 @@ class UserRegistrationView(generics.CreateAPIView):
             "error": "Erro ao registrar usuário.",
             "details": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+class CustomLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        identifier = request.data.get('identifier', '')
+        password = request.data.get('password', '')
+
+        if not identifier or not password:
+            return Response({
+                'error': 'Por favor, forneça o identificador e a senha.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=identifier)
+            username = user.username
+        except User.DoesNotExist:
+            username = identifier
+
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            })
+        else:
+            return Response({
+                'error': 'Credenciais inválidas.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
     
 class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]

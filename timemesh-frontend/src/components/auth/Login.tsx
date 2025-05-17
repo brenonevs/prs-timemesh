@@ -13,7 +13,7 @@ export const Login = () => {
   const { login } = useAuth();
   
   const [formData, setFormData] = useState({
-    username: '',
+    identifier: '',
     password: '',
   });
   const [error, setError] = useState('');
@@ -33,13 +33,17 @@ export const Login = () => {
     setIsLoading(true);
     
     try {
-      const { access, refresh } = await authService.login(formData.username, formData.password);
+      const { access, refresh } = await authService.login(formData.identifier, formData.password);
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
-      await login(formData.username, formData.password);
+      await login(formData.identifier, formData.password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError('Usuário ou senha inválidos');
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError('Usuário ou senha inválidos');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -62,10 +66,10 @@ export const Login = () => {
       <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
         <InputField
           icon={<UserIcon size={18} />}
-          name="username"
+          name="identifier"
           type="text"
-          placeholder="Username"
-          value={formData.username}
+          placeholder="Email ou nome de usuário"
+          value={formData.identifier}
           onChange={handleChange}
           required
         />
