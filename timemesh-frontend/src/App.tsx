@@ -10,6 +10,7 @@ import { RegisterPage } from './pages/auth/RegisterPage';
 import { SuccessPage } from './pages/auth/SuccessPage';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { CalendarPage } from './pages/calendar/CalendarPage';
+import { TeamPage } from './pages/team/TeamPage';
 import { NotFound } from './pages/NotFound';
 
 // Components
@@ -41,6 +42,11 @@ function App() {
                   <CalendarPage />
                 </ProtectedRoute>
               } />
+              <Route path="/team" element={
+                <ProtectedRoute>
+                  <TeamPage />
+                </ProtectedRoute>
+              } />
               
               {/* Redirect root to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />
@@ -55,4 +61,4 @@ function App() {
   );
 }
 
-export default App
+export default App;

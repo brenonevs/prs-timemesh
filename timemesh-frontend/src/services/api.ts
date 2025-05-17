@@ -4,8 +4,16 @@ const api = axios.create({
   baseURL: '/',
 });
 
+// Lista de rotas que não precisam de autenticação
+const publicRoutes = [
+  '/api/users/register/',
+  '/api/users/login/',
+  '/api/token/refresh/'
+];
+
 api.interceptors.request.use((config) => {
-  if (!config.url?.includes('/api/users/register/')) {
+  // Verifica se a rota não é pública
+  if (!publicRoutes.some(route => config.url?.includes(route))) {
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -19,7 +27,8 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/api/users/login/')) {
+    // Se o erro for 401 e não for uma tentativa de refresh
+    if (error.response?.status === 401 && !originalRequest._retry && !publicRoutes.some(route => originalRequest.url?.includes(route))) {
       originalRequest._retry = true;
 
       try {
@@ -32,11 +41,11 @@ api.interceptors.response.use(
         const { access } = response.data;
 
         localStorage.setItem('access_token', access);
-
         originalRequest.headers.Authorization = `Bearer ${access}`;
 
         return api(originalRequest);
       } catch (refreshError) {
+        // Se falhar ao renovar o token, limpa os dados e redireciona para o login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
