@@ -42,7 +42,7 @@ export const Register = () => {
     
     try {
       await register(formData.name, formData.username, formData.email, formData.password);
-      navigate('/dashboard');
+      navigate('/success');
     } catch (err: any) {
       const errorData = err.response?.data;
       

@@ -19,7 +19,7 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/api/users/login/')) {
       originalRequest._retry = true;
 
       try {
@@ -37,7 +37,6 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
