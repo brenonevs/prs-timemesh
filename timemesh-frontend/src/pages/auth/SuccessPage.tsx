@@ -1,17 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 
 export const SuccessPage = () => {
   const navigate = useNavigate();
+  const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate('/login');
-    }, 5000);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate('/login');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
-    return () => clearTimeout(timer);
+    return () => clearInterval(timer);
   }, [navigate]);
 
   return (
@@ -41,7 +49,7 @@ export const SuccessPage = () => {
             </Button>
 
             <div className="text-sm text-muted-foreground">
-              Redirecionando em <span className="font-medium text-foreground">5</span> segundos...
+              Redirecionando em <span className="font-medium text-foreground">{countdown}</span> segundos...
             </div>
           </div>
         </div>
