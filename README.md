@@ -54,14 +54,28 @@ TimeMesh allows users to register, query, update, and remove time availability s
 2. **Configure environment variables:**
    - Create a `.env` file in the project root with the following variables:
      ```
-     SECRET_KEY=a_secret_key
-     DEBUG=True
-     ALLOWED_HOSTS=*
-     DB_NAME=timemesh
-     DB_USER=postgres
-     DB_PASSWORD=postgres
-     DB_HOST=db
-     DB_PORT=5432
+      # Django
+      DEBUG=True
+      SECRET_KEY=django-insecure-super-secret-key-1234567890
+      ALLOWED_HOSTS=*
+      DJANGO_SUPERUSER_USERNAME=admin
+      DJANGO_SUPERUSER_EMAIL=admin@admin.com
+      DJANGO_SUPERUSER_PASSWORD=admin123
+
+      # Database
+      DB_NAME=timemesh
+      DB_USER=timemesh
+      DB_PASSWORD=secret
+      DB_HOST=db
+      DB_PORT=5432
+
+      # n8n Configuration
+      N8N_USER=admin
+      N8N_PASSWORD=sua_senha
+      N8N_HOST=localhost
+      N8N_WEBHOOK_URL=http://localhost:5678/webhook
+      N8N_BASIC_USER=n8n_user
+      N8N_BASIC_PASSWORD=n8n_pass
      ```
 
 3. **Start the containers:**
