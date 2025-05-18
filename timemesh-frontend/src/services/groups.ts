@@ -61,7 +61,11 @@ export const groupsService = {
     await api.post(`/api/groups/${groupId}/accept/`);
   },
 
-  async rejectInvite(inviteId: string) {
-    await api.post(`/api/groups/invites/${inviteId}/reject`);
+  async rejectInvite(invite: any) {
+    await api.post(`/api/groups/${invite.group_id}/reject/`);
+  },
+
+  async inviteUser(groupId: number, username: string) {
+    await api.post(`/api/groups/${groupId}/invite/`, { username });
   }
 }; 

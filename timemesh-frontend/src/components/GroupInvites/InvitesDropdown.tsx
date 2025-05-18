@@ -11,7 +11,7 @@ import { Mail, MailOpen } from 'lucide-react';
 interface InvitesDropdownProps {
   invites: any[];
   onAccept: (invite: any) => Promise<void>;
-  onReject: (inviteId: string) => Promise<void>;
+  onReject: (invite: any) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -28,8 +28,8 @@ const InvitesDropdown: React.FC<InvitesDropdownProps> = ({
     if (invites.length === 1) setOpen(false);
   };
 
-  const handleReject = async (inviteId: string) => {
-    await onReject(inviteId);
+  const handleReject = async (invite: any) => {
+    await onReject(invite);
     if (invites.length === 1) setOpen(false);
   };
 

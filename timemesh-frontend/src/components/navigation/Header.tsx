@@ -51,11 +51,11 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
     }
   };
 
-  const handleRejectInvite = async (inviteId: string) => {
+  const handleRejectInvite = async (invite: any) => {
     setIsLoading(true);
     try {
-      await groupsService.rejectInvite(inviteId);
-      setPendingInvites((current) => current.filter(invite => invite.id !== inviteId));
+      await groupsService.rejectInvite(invite);
+      setPendingInvites((current) => current.filter(i => i.id !== invite.id));
     } catch (error) {
     } finally {
       setIsLoading(false);

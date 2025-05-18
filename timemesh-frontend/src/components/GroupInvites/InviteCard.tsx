@@ -7,7 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface InviteCardProps {
   invite: any;
   onAccept: (invite: any) => Promise<void>;
-  onReject: (inviteId: string) => Promise<void>;
+  onReject: (invite: any) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -30,7 +30,7 @@ const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onReject, isL
         <Button 
           variant="outline"
           size="sm" 
-          onClick={() => onReject(invite.id)}
+          onClick={() => onReject(invite)}
           disabled={isLoading}
         >
           <X className="w-4 h-4 mr-1" /> Recusar

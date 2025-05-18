@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, MoreVertical } from 'lucide-react';
+import { Users, MoreVertical, UserPlus } from 'lucide-react';
 import { Button } from '../ui/Button';
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
 } from '../ui/DropdownMenu';
 import { Group } from '../../services/groups';
 import { useAuth } from '../../hooks/useAuth';
+import InviteUserModal from '../GroupInvites/InviteUserModal';
 
 interface TeamCardProps {
   team: Group;
@@ -18,6 +19,7 @@ interface TeamCardProps {
 export const TeamCard = ({ team, onDelete }: TeamCardProps) => {
   const { user } = useAuth();
   const isOwner = user && Number(user.id) === team.owner_id;
+  const [isInviteOpen, setIsInviteOpen] = React.useState(false);
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow">
@@ -26,9 +28,11 @@ export const TeamCard = ({ team, onDelete }: TeamCardProps) => {
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
             <Users className="w-6 h-6 text-primary" />
           </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{team.name}</h3>
-            <p className="text-sm text-muted-foreground">{team.description || 'Sem descrição'}</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h3 className="font-semibold text-foreground">{team.name}</h3>
+              <p className="text-sm text-muted-foreground">{team.description || 'Sem descrição'}</p>
+            </div>
           </div>
         </div>
         {isOwner && (
@@ -56,6 +60,24 @@ export const TeamCard = ({ team, onDelete }: TeamCardProps) => {
           <span className="text-muted-foreground">
             {team.members.length} membros
           </span>
+          {isOwner && (
+            <>
+              <Button
+                onClick={() => setIsInviteOpen(true)}
+                variant="ghost"
+                size="icon"
+                className="ml-1"
+                title="Convidar usuário para o grupo"
+              >
+                <UserPlus className="w-5 h-5" />
+              </Button>
+              <InviteUserModal
+                open={isInviteOpen}
+                onClose={() => setIsInviteOpen(false)}
+                groupId={team.id}
+              />
+            </>
+          )}
         </div>
       </div>
 
