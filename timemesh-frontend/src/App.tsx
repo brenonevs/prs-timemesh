@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from './components/ui/toaster';
 
 // Pages
 import { LoginPage } from './pages/auth/LoginPage';
@@ -57,6 +58,7 @@ function App() {
           </Router>
         </AuthProvider>
       </ThemeProvider>
+      <Toaster />
     </QueryClientProvider>
   );
 }

@@ -21,11 +21,30 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ open, onClose, groupI
     setIsLoading(true);
     try {
       await groupsService.inviteUser(groupId, username);
-      toast({ title: 'Convite enviado!', description: `Convite enviado para ${username}` });
+      toast({ title: 'Convite enviado!', description: `Convite enviado com sucesso para ${username}.` });
       setUsername('');
       onClose();
-    } catch (error) {
-      toast({ title: 'Erro ao convidar', description: 'Usuário não encontrado ou já convidado.', variant: 'destructive' });
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || error?.response?.data?.error || '';
+      if (msg.includes('não encontrado') || msg.includes('not found')) {
+        toast({
+          title: 'Usuário não encontrado',
+          description: 'Verifique o nome de usuário e tente novamente.',
+          variant: 'destructive',
+        });
+      } else if (msg.includes('já foi convidado') || msg.includes('already invited')) {
+        toast({
+          title: 'Usuário já convidado',
+          description: 'Este usuário já foi convidado para este grupo.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Erro ao enviar convite',
+          description: 'Erro ao enviar convite. Tente novamente.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -43,8 +62,11 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ open, onClose, groupI
             value={username}
             onChange={e => setUsername(e.target.value)}
             required
+            disabled={isLoading}
           />
-          <Button type="submit" isLoading={isLoading}>Convidar</Button>
+          <Button type="submit" isLoading={isLoading} disabled={isLoading}>
+            {isLoading ? 'Enviando...' : 'Convidar'}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
