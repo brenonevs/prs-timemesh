@@ -126,7 +126,4 @@ class GroupDeleteView(views.APIView):
             )
         
         group.delete()
-        return Response(
-            {'detail': 'Grupo deletado com sucesso.'},
-            status=status.HTTP_204_NO_CONTENT
-        )
+        return Response({'detail': 'Grupo deletado com sucesso.'}, status=status.HTTP_202_ACCEPTED)

@@ -34,7 +34,7 @@ export const TeamPage = () => {
   const handleDeleteTeam = async (teamId: number) => {
     try {
       await groupsService.deleteGroup(teamId);
-      setTeams(teams.filter(team => team.id !== teamId));
+      setTeams(prevTeams => prevTeams.filter(team => team.id !== teamId));
       toast({
         title: 'Time excluído',
         description: 'O time foi excluído com sucesso.',
