@@ -127,3 +127,22 @@ class GroupDeleteView(views.APIView):
         
         group.delete()
         return Response({'detail': 'Grupo deletado com sucesso.'}, status=status.HTTP_202_ACCEPTED)
+
+class GroupRejectInviteView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, group_id):
+        group = get_object_or_404(Group, id=group_id)
+        try:
+            membership = GroupMembership.objects.get(
+                group=group,
+                user=request.user,
+                accepted=False
+            )
+            membership.delete() 
+            return Response({'detail': 'Convite recusado com sucesso!'}, status=status.HTTP_200_OK)
+        except GroupMembership.DoesNotExist:
+            return Response(
+                {'detail': 'Você não possui convite pendente para este grupo.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
