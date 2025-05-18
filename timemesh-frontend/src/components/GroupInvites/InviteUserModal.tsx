@@ -54,17 +54,18 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ open, onClose, groupI
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Convidar usuário</DialogTitle>
+          <DialogTitle className="text-center">Convidar usuário</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleInvite} className="space-y-4">
+        <form onSubmit={handleInvite} className="flex flex-col gap-4 mt-2">
           <Input
             placeholder="Username do usuário"
             value={username}
             onChange={e => setUsername(e.target.value)}
             required
             disabled={isLoading}
+            className="w-full"
           />
-          <Button type="submit" isLoading={isLoading} disabled={isLoading}>
+          <Button type="submit" isLoading={isLoading} disabled={isLoading} className="w-full">
             {isLoading ? 'Enviando...' : 'Convidar'}
           </Button>
         </form>
