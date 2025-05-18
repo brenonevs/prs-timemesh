@@ -13,6 +13,8 @@ export interface Group {
     first_name: string;
     last_name: string;
   }>;
+  owner: string;
+  owner_id: number;
 }
 
 export const groupsService = {
@@ -47,5 +49,19 @@ export const groupsService = {
 
   async removeMember(groupId: number, userId: number) {
     await api.delete(`/api/groups/${groupId}/members/${userId}/`);
+  },
+
+  async getPendingInvites() {
+    const response = await api.get('/api/groups/pending-invites/');
+    return response.data;
+  },
+
+  async acceptInvite(invite: any) {
+    const groupId = invite.group_id;
+    await api.post(`/api/groups/${groupId}/accept/`);
+  },
+
+  async rejectInvite(inviteId: string) {
+    await api.post(`/api/groups/invites/${inviteId}/reject`);
   }
 }; 

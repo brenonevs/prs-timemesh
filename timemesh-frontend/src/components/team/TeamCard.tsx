@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/DropdownMenu';
 import { Group } from '../../services/groups';
+import { useAuth } from '../../hooks/useAuth';
 
 interface TeamCardProps {
   team: Group;
@@ -15,6 +16,9 @@ interface TeamCardProps {
 }
 
 export const TeamCard = ({ team, onDelete }: TeamCardProps) => {
+  const { user } = useAuth();
+  const isOwner = user && Number(user.id) === team.owner_id;
+
   return (
     <div className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between">
@@ -27,21 +31,23 @@ export const TeamCard = ({ team, onDelete }: TeamCardProps) => {
             <p className="text-sm text-muted-foreground">{team.description || 'Sem descrição'}</p>
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVertical className="w-5 h-5 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(team.id)}
-            >
-              Excluir Time
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {isOwner && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="w-5 h-5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDelete(team.id)}
+              >
+                Excluir Time
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <div className="mt-6 space-y-3">
