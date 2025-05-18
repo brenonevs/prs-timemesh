@@ -17,7 +17,12 @@ const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onReject, isL
     <Card className="mb-4 overflow-hidden border border-border/40 shadow-none">
       <CardContent className="p-4">
         <div>
-          <h3 className="font-medium text-lg">{invite.group.name || invite.groupName}</h3>
+          <h3 className="font-medium text-lg">
+            {invite.group?.name || invite.groupName || (typeof invite.group === 'string' ? invite.group : '')}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Grupo: <b>{invite.group?.name || invite.groupName || (typeof invite.group === 'string' ? invite.group : '')}</b>
+          </p>
           <p className="text-sm text-muted-foreground">
             Convidado por {invite.invited_by || invite.invitedByName}
           </p>

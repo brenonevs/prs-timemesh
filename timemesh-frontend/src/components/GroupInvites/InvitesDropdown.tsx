@@ -7,6 +7,7 @@ import {
 } from "../ui/Popover";
 import InviteCard from './InviteCard';
 import { Mail, MailOpen } from 'lucide-react';
+import { Tooltip } from '../ui/Tooltip';
 
 interface InvitesDropdownProps {
   invites: any[];
@@ -42,7 +43,13 @@ const InvitesDropdown: React.FC<InvitesDropdownProps> = ({
           className="relative"
           aria-label="Abrir convites"
         >
-          {open ? <MailOpen className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
+          <Tooltip content={
+            invites.length === 0
+              ? "Nenhum convite pendente"
+              : invites.map(i => i.group?.name || i.groupName).join(', ')
+          }>
+            {open ? <MailOpen className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
+          </Tooltip>
           {invites.length > 0 && (
             <span className="absolute -top-1 -right-1 rounded-full bg-primary text-primary-foreground text-xs w-5 h-5 flex items-center justify-center">
               {invites.length}
