@@ -5,7 +5,6 @@ import { AuthProvider } from './context/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from './components/ui/toaster';
 
-// Pages
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { SuccessPage } from './pages/auth/SuccessPage';
@@ -14,8 +13,14 @@ import { CalendarPage } from './pages/calendar/CalendarPage';
 import { TeamPage } from './pages/team/TeamPage';
 import { NotFound } from './pages/NotFound';
 
-// Components
 import { ProtectedRoute } from './components/routing/ProtectedRoute';
+
+const router = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true
+  }
+};
 
 // Create a client
 const queryClient = new QueryClient();
@@ -25,7 +30,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Router>
+          <Router future={router.future}>
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<LoginPage />} />

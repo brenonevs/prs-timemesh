@@ -1,18 +1,10 @@
 import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { Menu, Bell, Moon, Sun } from 'lucide-react';
+import { Menu, Moon, Sun } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
-import { groupsService } from '../../services/groups';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuItem,
-} from '../ui/DropdownMenu';
 import { Button } from '../ui/Button';
 import InvitesDropdown from '../GroupInvites/InvitesDropdown';
+import { useInvites } from '../../hooks/useInvites';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -21,46 +13,12 @@ interface HeaderProps {
 export const Header = ({ onMenuClick }: HeaderProps) => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [pendingInvites, setPendingInvites] = React.useState<any[]>([]);
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    async function fetchInvites() {
-      setIsLoading(true);
-      try {
-        const data = await groupsService.getPendingInvites();
-        setPendingInvites(data);
-      } catch (e) {
-        setPendingInvites([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchInvites();
-  }, []);
-
-  const handleAcceptInvite = async (invite: any) => {
-    setIsLoading(true);
-    try {
-      await groupsService.acceptInvite(invite);
-      setPendingInvites((current) => current.filter(i => i.id !== invite.id));
-    } catch (error) {
-      // Trate o erro conforme necessário
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRejectInvite = async (invite: any) => {
-    setIsLoading(true);
-    try {
-      await groupsService.rejectInvite(invite);
-      setPendingInvites((current) => current.filter(i => i.id !== invite.id));
-    } catch (error) {
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { 
+    pendingInvites, 
+    isLoading, 
+    handleAcceptInvite, 
+    handleRejectInvite 
+  } = useInvites();
   
   return (
     <header className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-card/80 backdrop-blur-md border-b border-border shadow-sm">

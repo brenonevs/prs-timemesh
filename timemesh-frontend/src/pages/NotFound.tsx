@@ -17,7 +17,7 @@ export const NotFound = () => {
         <div className="mt-8">
           <Button 
             variant="primary" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="px-6"
           >
             Back to Home

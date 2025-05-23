@@ -1,48 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '../../layouts/MainLayout';
-import { Search, Users, Filter } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import { CreateTeamForm } from '../../components/team/CreateTeamForm';
 import { TeamCard } from '../../components/team/TeamCard';
 import { useToast } from '../../hooks/useToast';
-import { groupsService, Group } from '../../services/groups';
+import { useTeams } from '../../hooks/useTeams';
 
 export const TeamPage = () => {
-  const [teams, setTeams] = useState<Group[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const { teams, isLoading, handleDeleteTeam, refreshTeams } = useTeams();
   const { toast } = useToast();
 
-  const fetchTeams = async () => {
+  const handleDelete = async (teamId: number) => {
     try {
-      const response = await groupsService.getGroups();
-      setTeams(response);
-    } catch (error) {
+      await handleDeleteTeam(teamId);
       toast({
-        title: 'Erro ao carregar times',
-        description: 'Não foi possível carregar a lista de times.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTeams();
-  }, []);
-
-  const handleDeleteTeam = async (teamId: number) => {
-    try {
-      await groupsService.deleteGroup(teamId);
-      setTeams(prevTeams => prevTeams.filter(team => team.id !== teamId));
-      toast({
-        title: 'Time excluído',
-        description: 'O time foi excluído com sucesso.',
+        title: 'Team deleted',
+        description: 'The team was successfully deleted.',
       });
     } catch (error) {
       toast({
-        title: 'Erro ao excluir time',
-        description: 'Não foi possível excluir o time.',
+        title: 'Error deleting team',
+        description: 'Failed to delete the team. Please try again.',
         variant: 'destructive',
       });
     }
@@ -58,16 +37,16 @@ export const TeamPage = () => {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Times</h1>
+            <h1 className="text-2xl font-bold text-foreground">Teams</h1>
             <div className="flex items-center gap-2 mt-1">
               <Users className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
-                {filteredTeams.length} times
+                {filteredTeams.length} teams
               </span>
             </div>
           </div>
 
-          <CreateTeamForm onTeamCreated={fetchTeams} />
+          <CreateTeamForm onTeamCreated={refreshTeams} />
         </div>
 
         {/* Search */}
@@ -75,7 +54,7 @@ export const TeamPage = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Buscar times..."
+            placeholder="Search teams..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -89,7 +68,7 @@ export const TeamPage = () => {
           </div>
         ) : filteredTeams.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Nenhum time encontrado.</p>
+            <p className="text-muted-foreground">No teams found.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -97,7 +76,7 @@ export const TeamPage = () => {
               <TeamCard
                 key={team.id}
                 team={team}
-                onDelete={handleDeleteTeam}
+                onDelete={handleDelete}
               />
             ))}
           </div>
