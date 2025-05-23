@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { groupsService } from '../services/groups';
+import { useAuth } from '../hooks/useAuth';
 
 interface Invite {
   id: number;
@@ -29,8 +30,11 @@ interface InvitesProviderProps {
 export const InvitesProvider = ({ children, pollInterval = 30000 }: InvitesProviderProps) => {
   const [pendingInvites, setPendingInvites] = useState<Invite[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const fetchInvites = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
       const data = await groupsService.getPendingInvites();
@@ -43,14 +47,18 @@ export const InvitesProvider = ({ children, pollInterval = 30000 }: InvitesProvi
   };
 
   useEffect(() => {
+    if (!user) return;
+
     fetchInvites();
 
     const intervalId = setInterval(fetchInvites, pollInterval);
 
     return () => clearInterval(intervalId);
-  }, [pollInterval]);
+  }, [pollInterval, user]);
 
   const handleAcceptInvite = async (invite: Invite) => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
       await groupsService.acceptInvite(invite);
@@ -62,6 +70,8 @@ export const InvitesProvider = ({ children, pollInterval = 30000 }: InvitesProvi
   };
 
   const handleRejectInvite = async (invite: Invite) => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
       await groupsService.rejectInvite(invite);

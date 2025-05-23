@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { groupsService, Group } from '../services/groups';
+import { useAuth } from '../hooks/useAuth';
 
 interface TeamsContextType {
   teams: Group[];
@@ -19,8 +20,11 @@ interface TeamsProviderProps {
 export const TeamsProvider = ({ children, pollInterval = 30000 }: TeamsProviderProps) => {
   const [teams, setTeams] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const fetchTeams = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
       const data = await groupsService.getGroups();
@@ -33,12 +37,14 @@ export const TeamsProvider = ({ children, pollInterval = 30000 }: TeamsProviderP
   };
 
   useEffect(() => {
+    if (!user) return;
+
     fetchTeams();
 
     const intervalId = setInterval(fetchTeams, pollInterval);
 
     return () => clearInterval(intervalId);
-  }, [pollInterval]);
+  }, [pollInterval, user]);
 
   const addTeam = (team: Group) => {
     setTeams(prevTeams => {

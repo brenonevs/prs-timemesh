@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
 import { Input } from '../ui/Input';
 import { groupsService } from '../../services/groups';
 import { useToast } from '../../hooks/useToast';
-import { useInvites } from '../../hooks/useInvites';
+import { useInvites } from '../../context/InvitesContext';
 
 interface InviteUserModalProps {
   open: boolean;

@@ -3,18 +3,20 @@ import api from './api';
 export interface Group {
   id: number;
   name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-  members: Array<{
-    id: number;
-    username: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-  }>;
+  description?: string;
   owner: string;
   owner_id: number;
+  created_at: string;
+  members: string[];
+}
+
+export interface GroupMember {
+  id: number;
+  user: string;
+  invited_by: string;
+  accepted: boolean;
+  invited_at: string;
+  accepted_at?: string;
 }
 
 export const groupsService = {
@@ -25,6 +27,11 @@ export const groupsService = {
 
   async getGroup(id: number) {
     const response = await api.get<Group>(`/api/groups/${id}/`);
+    return response.data;
+  },
+
+  async getGroupMembers(groupId: number) {
+    const response = await api.get<GroupMember[]>(`/api/groups/${groupId}/members/`);
     return response.data;
   },
 

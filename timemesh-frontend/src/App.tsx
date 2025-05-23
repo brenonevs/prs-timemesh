@@ -32,41 +32,49 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <TeamsProvider>
-            <InvitesProvider>
-              <Router future={router.future}>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/success" element={<SuccessPage />} />
-                  
-                  {/* Protected routes */}
-                  <Route path="/dashboard" element={
-                    <ProtectedRoute>
+          <Router future={router.future}>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/success" element={<SuccessPage />} />
+              
+              {/* Protected routes */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <TeamsProvider>
+                    <InvitesProvider>
                       <Dashboard />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/calendar" element={
-                    <ProtectedRoute>
+                    </InvitesProvider>
+                  </TeamsProvider>
+                </ProtectedRoute>
+              } />
+              <Route path="/calendar" element={
+                <ProtectedRoute>
+                  <TeamsProvider>
+                    <InvitesProvider>
                       <CalendarPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/team" element={
-                    <ProtectedRoute>
+                    </InvitesProvider>
+                  </TeamsProvider>
+                </ProtectedRoute>
+              } />
+              <Route path="/team" element={
+                <ProtectedRoute>
+                  <TeamsProvider>
+                    <InvitesProvider>
                       <TeamPage />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Redirect root to login */}
-                  <Route path="/" element={<Navigate to="/login" replace />} />
-                  
-                  {/* 404 Page */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Router>
-            </InvitesProvider>
-          </TeamsProvider>
+                    </InvitesProvider>
+                  </TeamsProvider>
+                </ProtectedRoute>
+              } />
+              
+              {/* Redirect root to login */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              
+              {/* 404 Page */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
         </AuthProvider>
       </ThemeProvider>
       <Toaster />
