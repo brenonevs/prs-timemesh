@@ -4,7 +4,8 @@ import { Menu, Moon, Sun } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../ui/Button';
 import InvitesDropdown from '../GroupInvites/InvitesDropdown';
-import { useInvites } from '../../hooks/useInvites';
+import { useInvites } from '../../context/InvitesContext';
+import { useTeams } from '../../context/TeamsContext';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -13,12 +14,21 @@ interface HeaderProps {
 export const Header = ({ onMenuClick }: HeaderProps) => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { refreshTeams } = useTeams();
   const { 
     pendingInvites, 
     isLoading, 
-    handleAcceptInvite, 
+    handleAcceptInvite: baseHandleAcceptInvite, 
     handleRejectInvite 
   } = useInvites();
+
+  const handleAcceptInvite = async (invite: any) => {
+    try {
+      await baseHandleAcceptInvite(invite);
+      await refreshTeams();
+    } catch (error) {
+    }
+  };
   
   return (
     <header className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-card/80 backdrop-blur-md border-b border-border shadow-sm">

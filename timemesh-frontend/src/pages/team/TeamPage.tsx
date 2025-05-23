@@ -4,16 +4,18 @@ import { Search, Users } from 'lucide-react';
 import { CreateTeamForm } from '../../components/team/CreateTeamForm';
 import { TeamCard } from '../../components/team/TeamCard';
 import { useToast } from '../../hooks/useToast';
-import { useTeams } from '../../hooks/useTeams';
+import { useTeams } from '../../context/TeamsContext';
+import { groupsService } from '../../services/groups';
 
 export const TeamPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const { teams, isLoading, handleDeleteTeam, refreshTeams } = useTeams();
+  const { teams, isLoading, refreshTeams, removeTeam } = useTeams();
   const { toast } = useToast();
 
   const handleDelete = async (teamId: number) => {
     try {
-      await handleDeleteTeam(teamId);
+      await groupsService.deleteGroup(teamId);
+      removeTeam(teamId);
       toast({
         title: 'Team deleted',
         description: 'The team was successfully deleted.',
