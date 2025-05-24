@@ -7,6 +7,7 @@ from .views import (
     PendingInvitesListView,
     GroupDeleteView,
     GroupRejectInviteView,
+    GroupRemoveMemberView,
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('<int:group_id>/members/', GroupMembersListView.as_view(), name='group-members'),
     path('pending-invites/', PendingInvitesListView.as_view(), name='pending-invites'),
     path('<int:group_id>/', GroupDeleteView.as_view(), name='group-delete'),
+    path('<int:group_id>/members/<str:username>/remove/', GroupRemoveMemberView.as_view(), name='group-remove-member'),
 ]

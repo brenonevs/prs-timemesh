@@ -8,6 +8,7 @@ from django.utils import timezone
 import requests
 import os
 from requests.auth import HTTPBasicAuth
+
 class GroupListCreateView(generics.ListCreateAPIView):
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -20,7 +21,6 @@ class GroupListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         group = serializer.save(owner=self.request.user)
-
         GroupMembership.objects.create(
             group=group,
             user=self.request.user,
@@ -34,9 +34,18 @@ class GroupInviteView(views.APIView):
     def post(self, request, group_id):
         group = get_object_or_404(Group, id=group_id, owner=request.user)
         username = request.data.get('username')
-        user = get_object_or_404(User, username=username)
+        
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': f'User "{username}" not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
         if GroupMembership.objects.filter(group=group, user=user).exists():
-            return Response({'detail': 'Usuário já foi convidado ou já é membro.'}, status=400)
+            return Response({'detail': 'User already invited or is a member.'}, status=400)
+            
         GroupMembership.objects.create(
             group=group,
             user=user,
@@ -45,12 +54,13 @@ class GroupInviteView(views.APIView):
         )
         
         payload = {
-            "grupo": group.name,
-            "convidado": user.username,
-            "email_convidado": user.email,
-            "convidado_por": request.user.username,
-            "link_aceite": f"https://your-site.com/groups/{group.id}/accept/"
+            "group": group.name,
+            "invited_user": user.username,
+            "invited_email": user.email,
+            "invited_by": request.user.username,
+            "accept_link": f"https://your-site.com/groups/{group.id}/accept/"
         }
+        
         N8N_BASIC_USER = os.getenv("N8N_BASIC_USER")
         N8N_BASIC_PASSWORD = os.getenv("N8N_BASIC_PASSWORD")
         auth = HTTPBasicAuth(N8N_BASIC_USER, N8N_BASIC_PASSWORD)
@@ -63,13 +73,13 @@ class GroupInviteView(views.APIView):
                 timeout=5
             )
             if response.status_code >= 200 and response.status_code < 300:
-                print(f"[n8n] E-mail enviado para {user.email} com sucesso!", flush=True)
+                print(f"[n8n] Email sent to {user.email} successfully!", flush=True)
             else:
-                print(f"[n8n] Falha ao enviar e-mail para {user.email}. Status: {response.status_code}", flush=True)
+                print(f"[n8n] Failed to send email to {user.email}. Status: {response.status_code}", flush=True)
         except Exception as e:
-            print(f"[n8n] Erro ao notificar n8n para {user.email}: {e}", flush=True)
+            print(f"[n8n] Error notifying n8n for {user.email}: {e}", flush=True)
 
-        return Response({'detail': f'Convite enviado para {username}.'})
+        return Response({'detail': f'Invite sent to {username}.'})
 
 class GroupAcceptInviteView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -85,10 +95,10 @@ class GroupAcceptInviteView(views.APIView):
             membership.accepted = True
             membership.accepted_at = timezone.now()
             membership.save()
-            return Response({'detail': 'Convite aceito com sucesso!'})
+            return Response({'detail': 'Invite accepted successfully!'})
         except GroupMembership.DoesNotExist:
             return Response(
-                {'detail': 'Você não possui convites pendentes para este grupo.'},
+                {'detail': 'You have no pending invites for this group.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -121,12 +131,12 @@ class GroupDeleteView(views.APIView):
         
         if group.owner != request.user:
             return Response(
-                {'detail': 'Apenas o dono do grupo pode deletá-lo.'},
+                {'detail': 'Only the group owner can delete it.'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
         group.delete()
-        return Response({'detail': 'Grupo deletado com sucesso.'}, status=status.HTTP_202_ACCEPTED)
+        return Response({'detail': 'Group deleted successfully.'}, status=status.HTTP_202_ACCEPTED)
 
 class GroupRejectInviteView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -140,9 +150,52 @@ class GroupRejectInviteView(views.APIView):
                 accepted=False
             )
             membership.delete() 
-            return Response({'detail': 'Convite recusado com sucesso!'}, status=status.HTTP_200_OK)
+            return Response({'detail': 'Invite rejected successfully!'}, status=status.HTTP_200_OK)
         except GroupMembership.DoesNotExist:
             return Response(
-                {'detail': 'Você não possui convite pendente para este grupo.'},
+                {'detail': 'You have no pending invite for this group.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class GroupRemoveMemberView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, group_id, username):
+        group = get_object_or_404(Group, id=group_id)
+        
+        if group.owner != request.user:
+            return Response(
+                {'detail': 'Only the group owner can remove members.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            user_to_remove = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'User not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        if user_to_remove == group.owner:
+            return Response(
+                {'detail': 'Cannot remove the group owner.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            membership = GroupMembership.objects.get(
+                group=group,
+                user=user_to_remove,
+                accepted=True
+            )
+            membership.delete()
+            return Response(
+                {'detail': f'User {username} removed from group successfully.'},
+                status=status.HTTP_200_OK
+            )
+        except GroupMembership.DoesNotExist:
+            return Response(
+                {'detail': 'User is not a member of this group.'},
                 status=status.HTTP_404_NOT_FOUND
             )
