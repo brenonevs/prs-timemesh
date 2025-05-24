@@ -4,7 +4,7 @@ const api = axios.create({
   baseURL: 'http://localhost:8000',
 });
 
-
+// Lista de rotas que não precisam de autenticação
 const publicRoutes = [
   '/api/users/register/',
   '/api/users/login/',
@@ -12,7 +12,7 @@ const publicRoutes = [
 ];
 
 api.interceptors.request.use((config) => {
-
+  // Verifica se a rota não é pública
   if (!publicRoutes.some(route => config.url?.includes(route))) {
     const token = localStorage.getItem('access_token');
     if (token) {
@@ -26,7 +26,6 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
 
     if (error.response?.status === 401 && !originalRequest._retry && !publicRoutes.some(route => originalRequest.url?.includes(route))) {
       originalRequest._retry = true;
@@ -45,7 +44,6 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');

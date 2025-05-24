@@ -157,29 +157,172 @@ class GroupRejectInviteView(views.APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-class GroupRemoveMemberView(views.APIView):
+class GroupTransferOwnershipView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, group_id, username):
+    def post(self, request):
+        group_id = request.data.get('group_id')
+        if not group_id:
+            return Response(
+                {'detail': 'É necessário especificar o ID do grupo.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         group = get_object_or_404(Group, id=group_id)
         
         if group.owner != request.user:
             return Response(
-                {'detail': 'Only the group owner can remove members.'},
+                {'detail': 'Apenas o dono do grupo pode transferir a propriedade.'},
                 status=status.HTTP_403_FORBIDDEN
+            )
+        
+        new_owner_username = request.data.get('new_owner_username')
+        if not new_owner_username:
+            return Response(
+                {'detail': 'É necessário especificar o novo dono do grupo.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            new_owner = User.objects.get(username=new_owner_username)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'Usuário não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Verifica se o novo dono é membro do grupo
+        if not GroupMembership.objects.filter(
+            group=group,
+            user=new_owner,
+            accepted=True
+        ).exists():
+            return Response(
+                {'detail': 'O novo dono deve ser um membro do grupo.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Transfere a propriedade
+        group.owner = new_owner
+        group.save()
+        
+        return Response(
+            {'detail': f'Propriedade do grupo transferida para {new_owner_username} com sucesso.'},
+            status=status.HTTP_200_OK
+        )
+
+class GroupRemoveMemberView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        group_id = request.data.get('group_id')
+        if not group_id:
+            return Response(
+                {'detail': 'É necessário especificar o ID do grupo.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        group = get_object_or_404(Group, id=group_id)
+        
+        # Verifica se o usuário é membro do grupo
+        if not GroupMembership.objects.filter(
+            group=group,
+            user=request.user,
+            accepted=True
+        ).exists():
+            return Response(
+                {'detail': 'Você não é membro deste grupo.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        username = request.data.get('username')
+        if not username:
+            return Response(
+                {'detail': 'É necessário especificar o username do usuário.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
         
         try:
             user_to_remove = User.objects.get(username=username)
         except User.DoesNotExist:
             return Response(
-                {'detail': 'User not found.'},
+                {'detail': 'Usuário não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
         
+        # Se o usuário está tentando remover a si mesmo
+        if user_to_remove == request.user:
+            # Se for o dono do grupo
+            if group.owner == request.user:
+                # Conta quantos outros membros existem
+                other_members = GroupMembership.objects.filter(
+                    group=group,
+                    accepted=True
+                ).exclude(user=request.user).count()
+                
+                if other_members == 0:
+                    # Se não houver outros membros, deleta o grupo
+                    group.delete()
+                    return Response(
+                        {'detail': 'Grupo deletado com sucesso pois não havia outros membros.'},
+                        status=status.HTTP_200_OK
+                    )
+                elif other_members == 1:
+                    # Se houver apenas um outro membro, transfere a propriedade automaticamente
+                    new_owner = GroupMembership.objects.filter(
+                        group=group,
+                        accepted=True
+                    ).exclude(user=request.user).first().user
+                    
+                    group.owner = new_owner
+                    group.save()
+                    
+                    # Remove o antigo dono
+                    membership = GroupMembership.objects.get(
+                        group=group,
+                        user=request.user,
+                        accepted=True
+                    )
+                    membership.delete()
+                    
+                    return Response(
+                        {'detail': f'Propriedade transferida automaticamente para {new_owner.username} e você saiu do grupo.'},
+                        status=status.HTTP_200_OK
+                    )
+                else:
+                    # Se houver múltiplos membros, retorna erro informando que precisa transferir a propriedade primeiro
+                    return Response(
+                        {
+                            'detail': 'Você precisa transferir a propriedade do grupo antes de sair.',
+                            'requires_ownership_transfer': True,
+                            'other_members_count': other_members
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Se não for o dono, pode sair normalmente
+            membership = GroupMembership.objects.get(
+                group=group,
+                user=request.user,
+                accepted=True
+            )
+            membership.delete()
+            return Response(
+                {'detail': 'Você saiu do grupo com sucesso.'},
+                status=status.HTTP_200_OK
+            )
+        
+        # Se o usuário está tentando remover outro membro
+        if group.owner != request.user:
+            return Response(
+                {'detail': 'Apenas o dono do grupo pode remover outros membros.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Se o usuário a ser removido for o dono do grupo
         if user_to_remove == group.owner:
             return Response(
-                {'detail': 'Cannot remove the group owner.'},
+                {'detail': 'Não é possível remover o dono do grupo.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -191,11 +334,11 @@ class GroupRemoveMemberView(views.APIView):
             )
             membership.delete()
             return Response(
-                {'detail': f'User {username} removed from group successfully.'},
+                {'detail': f'Usuário {username} removido do grupo com sucesso.'},
                 status=status.HTTP_200_OK
             )
         except GroupMembership.DoesNotExist:
             return Response(
-                {'detail': 'User is not a member of this group.'},
+                {'detail': 'Usuário não é membro deste grupo.'},
                 status=status.HTTP_404_NOT_FOUND
             )

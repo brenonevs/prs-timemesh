@@ -8,15 +8,17 @@ from .views import (
     GroupDeleteView,
     GroupRejectInviteView,
     GroupRemoveMemberView,
+    GroupTransferOwnershipView,
 )
 
 urlpatterns = [
-    path('', GroupListCreateView.as_view(), name='group-list-create'),  
+    path('pending-invites/', PendingInvitesListView.as_view(), name='pending-invites'),
+    path('remove-member/', GroupRemoveMemberView.as_view(), name='group-remove-member'),
+    path('transfer-ownership/', GroupTransferOwnershipView.as_view(), name='group-transfer-ownership'),
     path('<int:group_id>/invite/', GroupInviteView.as_view(), name='group-invite'),
     path('<int:group_id>/accept/', GroupAcceptInviteView.as_view(), name='group-accept-invite'),
     path('<int:group_id>/reject/', GroupRejectInviteView.as_view(), name='group-reject-invite'),
     path('<int:group_id>/members/', GroupMembersListView.as_view(), name='group-members'),
-    path('pending-invites/', PendingInvitesListView.as_view(), name='pending-invites'),
     path('<int:group_id>/', GroupDeleteView.as_view(), name='group-delete'),
-    path('<int:group_id>/members/<str:username>/remove/', GroupRemoveMemberView.as_view(), name='group-remove-member'),
+    path('', GroupListCreateView.as_view(), name='group-list-create'),
 ]
