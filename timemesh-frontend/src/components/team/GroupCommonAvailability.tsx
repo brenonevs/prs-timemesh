@@ -29,26 +29,21 @@ export const GroupCommonAvailability: React.FC<GroupCommonAvailabilityProps> = (
 
   const handleFindCommonTimes = async () => {
     if (!selectedDate) return;
-
+    
     setIsLoading(true);
     setError(null);
 
     try {
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      const slots = await availabilityService.getGroupCommonAvailability(groupId, formattedDate);
-      
-      // Filter out any slots that might not have the expected structure
-      const validSlots = slots.filter(slot => 
-        slot.date && 
-        slot.start_time && 
-        slot.end_time && 
-        Array.isArray(slot.users) && 
-        slot.users.length > 0
+      const slots = await availabilityService.getGroupCommonAvailability(
+        groupId,
+        formattedDate,
+        formattedDate // We'll send the same date twice until backend supports ranges
       );
+
+      setCommonSlots(slots);
       
-      setCommonSlots(validSlots);
-      
-      if (validSlots.length === 0) {
+      if (slots.length === 0) {
         setError('No common availability found for this date. Make sure team members have marked their available time slots.');
       }
     } catch (error) {
