@@ -415,9 +415,13 @@ export const CalendarPage = () => {
   };
 
   const formatHour = (hour: number) => {
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:00 ${period}`;
+    const startHour = hour.toString().padStart(2, '0');
+    const endHour = (hour + 1).toString().padStart(2, '0');
+    const period = hour < 12 ? 'AM' : 'PM';
+    return {
+      time: `${startHour}:00 - ${endHour}:00`,
+      period
+    };
   };
 
   const getSlotInfo = (day: string, hour: number) => {
@@ -526,8 +530,11 @@ export const CalendarPage = () => {
             <div className="grid grid-rows-[repeat(17,minmax(40px,1fr))] h-full divide-y divide-border">
               {HOURS.map(hour => (
                 <div key={hour} className="grid grid-cols-8 divide-x divide-border">
-                  <div className="p-2 text-xs text-muted-foreground">
-                    {formatHour(hour)}
+                  <div className="p-2 text-xs text-muted-foreground flex items-center">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] tabular-nums">{formatHour(hour).time}</span>
+                      <span className="text-[10px] text-muted-foreground/75 ml-0.5">{formatHour(hour).period}</span>
+                    </div>
                   </div>
                   {WEEKDAYS.map((day, colIdx) => {
                     const slot = timeSlots.find((s: any) =>
