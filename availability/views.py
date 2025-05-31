@@ -168,7 +168,7 @@ class GroupCommonAvailabilityView(generics.CreateAPIView):
             accepted=True
         ).exists():
             return Response(
-                {'detail': 'Você não é membro deste grupo.'},
+                {'detail': 'You are not a member of this group.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -185,7 +185,8 @@ class GroupCommonAvailabilityView(generics.CreateAPIView):
 
         slots = AvailabilitySlot.objects.filter(
             user_id__in=user_ids,
-            date=date
+            date=date,
+            is_available=True
         )
         
         user_slots = defaultdict(list)
