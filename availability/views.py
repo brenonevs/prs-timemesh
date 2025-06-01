@@ -7,13 +7,15 @@ from .serializers import (
     AvailabilitySlotSerializer, 
     CommonAvailabilitySerializer,
     CommonAvailabilityRequestSerializer,
-    GroupCommonAvailabilityRequestSerializer
+    GroupCommonAvailabilityRequestSerializer,
+    BatchAvailabilitySlotSerializer
 )
 from datetime import time, timedelta, datetime, date
 from collections import defaultdict
 from groups.models import Group, GroupMembership
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.decorators import action
 import datetime
 
 class AvailabilitySlotViewSet(viewsets.ModelViewSet):
@@ -48,6 +50,56 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
             validated_data['title'] = 'Ocupado'
 
         serializer.create(validated_data)
+
+    @action(detail=False, methods=['post'], url_path='batch_create')
+    def batch_create(self, request):
+        serializer = BatchAvailabilitySlotSerializer(data=request.data)
+        if serializer.is_valid():
+            result = serializer.create({'user': request.user, 'slots': serializer.validated_data['slots']})
+            
+            if result['errors']:
+                return Response({
+                    'created_slots': AvailabilitySlotSerializer(result['created_slots'], many=True).data,
+                    'errors': result['errors']
+                }, status=status.HTTP_207_MULTI_STATUS)
+            
+            return Response(
+                AvailabilitySlotSerializer(result['created_slots'], many=True).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='batch_delete')
+    def batch_delete(self, request):
+        slots_data = request.data.get('slots', [])
+        deleted_count = 0
+        errors = []
+
+        for slot_data in slots_data:
+            try:
+                slot = AvailabilitySlot.objects.get(
+                    user=request.user,
+                    date=slot_data['date'],
+                    start_time=slot_data['start_time'],
+                    end_time=slot_data['end_time']
+                )
+                slot.delete()
+                deleted_count += 1
+            except AvailabilitySlot.DoesNotExist:
+                errors.append({
+                    'slot': slot_data,
+                    'error': 'Slot not found'
+                })
+            except Exception as e:
+                errors.append({
+                    'slot': slot_data,
+                    'error': str(e)
+                })
+
+        return Response({
+            'deleted_count': deleted_count,
+            'errors': errors
+        }, status=status.HTTP_200_OK if not errors else status.HTTP_207_MULTI_STATUS)
 
 class CommonAvailabilityView(generics.CreateAPIView):
     serializer_class = CommonAvailabilityRequestSerializer

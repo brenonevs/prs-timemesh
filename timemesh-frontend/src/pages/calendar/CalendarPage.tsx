@@ -5,21 +5,16 @@ import { Button } from '../../components/ui/Button';
 import { DayPicker } from 'react-day-picker';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import 'react-day-picker/dist/style.css';
-import api from '../../services/api';
+import { availabilityService, TimeSlot, ApiTimeSlot } from '../../services/availability';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SlotModal } from '../../components/calendar/SlotModal';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); 
 
-interface TimeSlot {
-  id: string;
-  day: string;
-  hour: number;
-  isAvailable: boolean;
-  label?: string;
-  notes?: string;
-  date?: string;
+interface DateSelectorProps {
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
 }
 
 interface ModalTimeSlot {
@@ -40,7 +35,7 @@ interface SaveSlotData {
   };
 }
 
-const DateSelector = ({ selectedDate, onDateChange }) => {
+const DateSelector: React.FC<DateSelectorProps> = ({ selectedDate, onDateChange }) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
 
@@ -135,12 +130,12 @@ const DateSelector = ({ selectedDate, onDateChange }) => {
 };
 
 const fetchSlots = async () => {
-  const response = await api.get('/api/availability/slots/');
-  return response.data;
+  const response = await availabilityService.getSlots();
+  return response;
 };
 
 export const CalendarPage = () => {
-  const { data: timeSlots = [], isLoading, isError } = useQuery({
+  const { data: timeSlots = [], isLoading, isError } = useQuery<ApiTimeSlot[]>({
     queryKey: ['slots'],
     queryFn: fetchSlots,
   });
@@ -219,32 +214,26 @@ export const CalendarPage = () => {
 
     const slots = getSelectedSlots(mouseDown, currentHover);
     
-    if (mouseDown.button === 2) { 
+    if (mouseDown.button === 2) { // Right click - Delete slots
       try {
-        for (const slot of slots) {
-          const dayIndex = WEEKDAYS.indexOf(slot.day);
-          const slotDate = weekDates[dayIndex];
-          const formattedDate = format(slotDate, 'yyyy-MM-dd');
-          const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
-          const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
+        const slotsToDelete = slots.map((slot: TimeSlot) => ({
+          date: slot.date!,
+          start_time: slot.start_time!,
+          end_time: slot.end_time!,
+          is_available: slot.is_available ?? true
+        }));
 
-          const response = await api.get('/api/availability/slots/', {
-            params: {
-              date: formattedDate,
-              start_time: startTime,
-              end_time: endTime
-            }
-          });
-
-          if (response.data && response.data.length > 0) {
-            await api.delete(`/api/availability/slots/${response.data[0].id}/`);
-          }
+        const result = await availabilityService.batchDeleteSlots(slotsToDelete);
+        
+        if (result.errors && result.errors.length > 0) {
+          console.error('Some slots failed to delete:', result.errors);
         }
+
         queryClient.invalidateQueries({ queryKey: ['slots'] });
       } catch (error) {
-        console.error('Erro ao remover horários:', error);
+        console.error('Error deleting time slots:', error);
       }
-    } else if (mouseDown.button === 0) { 
+    } else if (mouseDown.button === 0) { // Left click - Create/Update slots
       const selectedModalSlots = slots.map(slot => {
         const dayIndex = WEEKDAYS.indexOf(slot.day);
         const slotDate = weekDates[dayIndex];
@@ -302,14 +291,18 @@ export const CalendarPage = () => {
         const hour = HOURS[hourIndex];
         const slotId = `${day}-${hour}`;
         
-        const existingSlot = timeSlots.find(slot => slot.id === slotId) || {
+        const existingSlot = timeSlots.find((slot: ApiTimeSlot) => slot.id === slotId) || {
           id: slotId,
           day,
           hour,
-          isAvailable: true
+          isAvailable: true,
+          date: format(weekDates[dayIndex], 'yyyy-MM-dd'),
+          start_time: `${hour.toString().padStart(2, '0')}:00:00`,
+          end_time: `${(hour + 1).toString().padStart(2, '0')}:00:00`,
+          is_available: true
         };
         
-        selectedSlots.push(existingSlot);
+        selectedSlots.push(existingSlot as TimeSlot);
       }
     }
     
@@ -318,19 +311,26 @@ export const CalendarPage = () => {
 
   const saveSlotChanges = async (data: SaveSlotData) => {
     try {
-      for (const slot of selectedSlots) {
-        await api.post('/api/availability/slots/', {
-          date: slot.date,
-          start_time: slot.start_time,
-          end_time: slot.end_time,
-          title: data.title || 'Disponível',
-          is_available: data.is_available,
-          recurrence: data.recurrence
-        });
+      const slotsToSave = selectedSlots.map((slot: ModalTimeSlot) => ({
+        date: slot.date,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        title: data.is_available ? (data.title || 'Available') : 'Busy',
+        is_available: data.is_available,
+        ...(data.recurrence && { recurrence: data.recurrence })
+      }));
+
+      const result = await availabilityService.batchCreateSlots(slotsToSave);
+      
+      if (result.errors && result.errors.length > 0) {
+        // Log only unique error messages to avoid spam
+        const uniqueErrors = new Set(result.errors.map(e => e.error));
+        console.log('Some slots were already scheduled:', Array.from(uniqueErrors));
       }
+
       queryClient.invalidateQueries({ queryKey: ['slots'] });
     } catch (error) {
-      console.error('Erro ao salvar horários:', error);
+      console.error('Error saving time slots:', error);
     }
   };
 
@@ -345,7 +345,7 @@ export const CalendarPage = () => {
   };
 
   const getSlotInfo = (day: string, hour: number) => {
-    return timeSlots.find(slot => 
+    return timeSlots.find((slot: ApiTimeSlot) => 
       slot.id === `${day}-${hour}` && 
       (!slot.date || new Date(slot.date).toDateString() === selectedDate.toDateString())
     );

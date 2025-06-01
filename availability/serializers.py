@@ -190,3 +190,81 @@ class CommonAvailabilitySerializer(serializers.Serializer):
     start_time = serializers.TimeField()
     end_time = serializers.TimeField()
     users = serializers.ListField(child=serializers.DictField())
+
+class BatchAvailabilitySlotSerializer(serializers.Serializer):
+    slots = AvailabilitySlotSerializer(many=True)
+
+    def create(self, validated_data):
+        slots_data = validated_data.get('slots', [])
+        created_slots = []
+        errors = []
+
+        for slot_data in slots_data:
+            try:
+                recurrence = slot_data.pop('recurrence', None)
+                start_date = slot_data['date']
+                user = validated_data['user']
+                start_time = slot_data['start_time']
+                end_time = slot_data['end_time']
+
+                dates = self._get_recurrence_dates(start_date, recurrence) if recurrence else [start_date]
+
+                for slot_date in dates:
+                    existing_slot = AvailabilitySlot.objects.filter(
+                        user=user,
+                        date=slot_date,
+                        start_time=start_time,
+                        end_time=end_time
+                    ).first()
+
+                    if existing_slot:
+                        existing_slot.title = slot_data.get('title', '')
+                        existing_slot.is_available = slot_data.get('is_available', True)
+                        existing_slot.save()
+                        created_slots.append(existing_slot)
+                    else:
+                        slot = AvailabilitySlot.objects.create(
+                            user=user,
+                            date=slot_date,
+                            start_time=start_time,
+                            end_time=end_time,
+                            title=slot_data.get('title', ''),
+                            is_available=slot_data.get('is_available', True)
+                        )
+                        created_slots.append(slot)
+
+            except Exception as e:
+                errors.append({
+                    'slot': slot_data,
+                    'error': str(e)
+                })
+
+        return {
+            'created_slots': created_slots,
+            'errors': errors
+        }
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError("Batch update not supported")
+
+    def _get_recurrence_dates(self, start_date: date, recurrence: dict) -> List[date]:
+        """Helper method to generate dates based on recurrence options"""
+        if not recurrence or recurrence['repeat_type'] == 'none':
+            return [start_date]
+
+        dates = []
+        current_date = start_date
+        end_date = recurrence['end_date']
+
+        while current_date <= end_date:
+            if recurrence['repeat_type'] == 'daily':
+                dates.append(current_date)
+            elif recurrence['repeat_type'] == 'weekly':
+                if current_date.weekday() == start_date.weekday():
+                    dates.append(current_date)
+            elif recurrence['repeat_type'] == 'specific_days':
+                if current_date.weekday() in recurrence['weekdays']:
+                    dates.append(current_date)
+            current_date += timedelta(days=1)
+
+        return dates

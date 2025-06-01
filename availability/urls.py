@@ -7,7 +7,7 @@ router.register(r'slots', AvailabilitySlotViewSet, basename='availability-slot')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('match/', CommonAvailabilityView.as_view(), name='common-availability'),
+    path('common/', CommonAvailabilityView.as_view(), name='common-availability'),
     path('group/<int:group_id>/match/', GroupCommonAvailabilityView.as_view(), name='group-common-availability'),
 ]
 
