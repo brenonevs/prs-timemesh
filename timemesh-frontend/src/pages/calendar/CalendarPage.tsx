@@ -7,6 +7,7 @@ import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import 'react-day-picker/dist/style.css';
 import api from '../../services/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { SlotModal } from '../../components/calendar/SlotModal';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); 
@@ -21,121 +22,23 @@ interface TimeSlot {
   date?: string;
 }
 
-interface SlotModalProps {
-  slots: TimeSlot[];
-  onClose: () => void;
-  onSave: (data: { label?: string; notes?: string; isAvailable: boolean }) => void;
+interface ModalTimeSlot {
+  date: string;
+  start_time: string;
+  end_time: string;
+  title?: string;
+  is_available: boolean;
 }
 
-const SlotModal = ({ slots, onClose, onSave }: SlotModalProps) => {
-  const [label, setLabel] = useState(slots[0]?.label || '');
-  const [notes, setNotes] = useState(slots[0]?.notes || '');
-  const [isAvailable, setIsAvailable] = useState(slots[0]?.isAvailable ?? true);
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-xl p-6 w-full max-w-md shadow-xl animate-fadeIn">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">
-            {slots.length > 1 
-              ? `Manage ${slots.length} Time Slots`
-              : 'Manage Time Slot'
-            }
-          </h3>
-          <button onClick={onClose} className="p-2 hover:bg-secondary/20 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          {/* Availability Toggle */}
-          <div className="flex items-center gap-4 p-3 rounded-lg bg-secondary/10">
-            <div className="flex-1">
-              <h4 className="font-medium">Availability</h4>
-              <p className="text-sm text-muted-foreground">
-                Set availability for {slots.length > 1 ? 'these time slots' : 'this time slot'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsAvailable(true)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  isAvailable 
-                    ? 'bg-success/20 text-success-foreground'
-                    : 'hover:bg-secondary/20'
-                }`}
-              >
-                Available
-              </button>
-              <button
-                onClick={() => setIsAvailable(false)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  !isAvailable 
-                    ? 'bg-destructive/20 text-destructive-foreground'
-                    : 'hover:bg-secondary/20'
-                }`}
-              >
-                Busy
-              </button>
-            </div>
-          </div>
-
-          {/* Label Input */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Label</label>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="E.g., Meeting, Study, Exercise"
-              className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-
-          {/* Notes Input */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any additional notes..."
-              rows={3}
-              className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-            />
-          </div>
-
-          {!isAvailable && label && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
-              <AlertCircle className="w-5 h-5 mt-0.5" />
-              <p className="text-sm">
-                Setting {slots.length > 1 ? 'these slots' : 'this slot'} as busy will remove any existing labels and notes.
-              </p>
-            </div>
-          )}
-        </div>
-        
-        <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button 
-            variant="primary" 
-            onClick={() => {
-              onSave({
-                label: isAvailable ? label : undefined,
-                notes: isAvailable ? notes : undefined,
-                isAvailable
-              });
-              onClose();
-            }}
-          >
-            Save Changes
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
+interface SaveSlotData {
+  title?: string;
+  is_available: boolean;
+  recurrence?: {
+    repeat_type: string;
+    end_date?: string;
+    weekdays?: number[];
+  };
+}
 
 const DateSelector = ({ selectedDate, onDateChange }) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -242,7 +145,7 @@ export const CalendarPage = () => {
     queryFn: fetchSlots,
   });
   const queryClient = useQueryClient();
-  const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
+  const [selectedSlots, setSelectedSlots] = useState<ModalTimeSlot[]>([]);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [mouseDown, setMouseDown] = useState<{ button: number; day: string; hour: number; x: number; y: number } | null>(null);
   const [currentHover, setCurrentHover] = useState<{ day: string; hour: number } | null>(null);
@@ -342,7 +245,29 @@ export const CalendarPage = () => {
         console.error('Erro ao remover horários:', error);
       }
     } else if (mouseDown.button === 0) { 
-      setSelectedSlots(slots);
+      const selectedModalSlots = slots.map(slot => {
+        const dayIndex = WEEKDAYS.indexOf(slot.day);
+        const slotDate = weekDates[dayIndex];
+        const formattedDate = format(slotDate, 'yyyy-MM-dd');
+        const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
+        const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
+
+        const existingSlot = timeSlots.find((s: any) => 
+          s.date === formattedDate && 
+          s.start_time === startTime && 
+          s.end_time === endTime
+        );
+
+        return {
+          date: formattedDate,
+          start_time: startTime,
+          end_time: endTime,
+          title: existingSlot?.title || '',
+          is_available: existingSlot?.is_available ?? true
+        };
+      });
+
+      setSelectedSlots(selectedModalSlots);
       
       if (!isDragging) {
         setShowSlotModal(true);
@@ -391,21 +316,16 @@ export const CalendarPage = () => {
     return selectedSlots;
   };
 
-  const saveSlotChanges = async (data: { label?: string; notes?: string; isAvailable: boolean }) => {
+  const saveSlotChanges = async (data: SaveSlotData) => {
     try {
       for (const slot of selectedSlots) {
-        const dayIndex = WEEKDAYS.indexOf(slot.day);
-        const slotDate = weekDates[dayIndex];
-        const formattedDate = format(slotDate, 'yyyy-MM-dd');
-        const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
-        const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
-
         await api.post('/api/availability/slots/', {
-          date: formattedDate,
-          start_time: startTime,
-          end_time: endTime,
-          title: data.label || 'Disponível',
-          is_available: data.isAvailable
+          date: slot.date,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          title: data.title || 'Disponível',
+          is_available: data.is_available,
+          recurrence: data.recurrence
         });
       }
       queryClient.invalidateQueries({ queryKey: ['slots'] });
@@ -595,9 +515,9 @@ export const CalendarPage = () => {
       </div>
 
       {/* Slot Modal */}
-      {showSlotModal && (
+      {showSlotModal && selectedSlots[0] && (
         <SlotModal
-          slots={selectedSlots}
+          slot={selectedSlots[0]}
           onClose={() => {
             setShowSlotModal(false);
             setSelectedSlots([]);

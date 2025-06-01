@@ -39,66 +39,15 @@ class AvailabilitySlotViewSet(viewsets.ModelViewSet):
         return queryset
     
     def perform_create(self, serializer):
-        user = self.request.user
-        date = serializer.validated_data['date']
-        start_time = serializer.validated_data['start_time']
-        end_time = serializer.validated_data['end_time']
-        title = serializer.validated_data['title']
-        is_available = serializer.validated_data.get('is_available', True)
-        if not is_available:
-            title = 'Ocupado'
+        validated_data = {
+            **serializer.validated_data,
+            'user': self.request.user
+        }
 
-        current_time = start_time
-        while current_time < end_time:
-            next_time = (datetime.datetime.combine(datetime.date.today(), current_time) + 
-                        datetime.timedelta(hours=1)).time()
-            
-            if next_time > end_time:
-                next_time = end_time
+        if not validated_data.get('is_available', True):
+            validated_data['title'] = 'Ocupado'
 
-            existing_slots = AvailabilitySlot.objects.filter(
-                user=user,
-                date=date
-            )
-
-            overlapping_slots = []
-            for slot in existing_slots:
-                if (current_time <= slot.end_time and next_time >= slot.start_time):
-                    overlapping_slots.append(slot)
-
-            if overlapping_slots:
-                for slot in overlapping_slots:
-                    slot.delete()
-                    
-                    if slot.start_time < current_time:
-                        AvailabilitySlot.objects.create(
-                            user=user,
-                            date=date,
-                            start_time=slot.start_time,
-                            end_time=current_time,
-                            title=slot.title,
-                            is_available=slot.is_available
-                        )
-                    if slot.end_time > next_time:
-                        AvailabilitySlot.objects.create(
-                            user=user,
-                            date=date,
-                            start_time=next_time,
-                            end_time=slot.end_time,
-                            title=slot.title,
-                            is_available=slot.is_available
-                        )
-
-            AvailabilitySlot.objects.create(
-                user=user,
-                date=date,
-                start_time=current_time,
-                end_time=next_time,
-                title=title,
-                is_available=is_available
-            )
-
-            current_time = next_time
+        serializer.create(validated_data)
 
 class CommonAvailabilityView(generics.CreateAPIView):
     serializer_class = CommonAvailabilityRequestSerializer
