@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/Dialog';
 import { Group, GroupMember, groupsService } from '../../services/groups';
 import { formatDistanceToNow } from 'date-fns';
 import { Users, Calendar, UserPlus } from 'lucide-react';
@@ -44,9 +44,12 @@ export const GroupDetails: React.FC<GroupDetailsProps> = ({ group, open, onClose
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="group-details-description">
           <DialogHeader>
             <DialogTitle>{group.name}</DialogTitle>
+            <DialogDescription id="group-details-description">
+              View and manage team members and common availability
+            </DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="members" className="w-full">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/Dialog';
 import { Input } from '../ui/Input';
 import { groupsService } from '../../services/groups';
 import { useToast } from '../../hooks/useToast';
@@ -56,9 +56,12 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ open, onClose, groupI
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent aria-describedby="invite-user-description">
         <DialogHeader>
           <DialogTitle className="text-center">Invite User</DialogTitle>
+          <DialogDescription id="invite-user-description">
+            Enter a username to invite them to join the team
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleInvite} className="flex flex-col gap-4 mt-2">
           <Input

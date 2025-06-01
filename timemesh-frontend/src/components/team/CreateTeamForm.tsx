@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '../ui/Dialog';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Plus } from 'lucide-react';
@@ -46,12 +46,15 @@ export const CreateTeamForm = ({ onTeamCreated }: CreateTeamFormProps) => {
       <DialogTrigger asChild>
         <Button variant="primary" className="md:w-auto">
           <Plus className="w-4 h-4 mr-2" />
-          Criar Novo Time
+          Create New Team
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent aria-describedby="create-team-description">
         <DialogHeader>
-          <DialogTitle>Criar Novo Time</DialogTitle>
+          <DialogTitle>Create New Team</DialogTitle>
+          <DialogDescription id="create-team-description">
+            Create a new team and start inviting members
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
