@@ -10,13 +10,18 @@ interface CommonAvailabilitySlot {
   }[];
 }
 
+interface GroupAvailabilityRequest {
+  date?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
 export const availabilityService = {
-  async getGroupCommonAvailability(groupId: number, startDate: string, endDate: string): Promise<CommonAvailabilitySlot[]> {
-    const response = await api.post(`/api/availability/group/${groupId}/match/`, {
-      date: startDate // For now, we'll just use the start date until backend supports date range
-    });
-    
-    // Return the array of slots
+  async getGroupCommonAvailability(
+    groupId: number,
+    options: GroupAvailabilityRequest
+  ): Promise<CommonAvailabilitySlot[]> {
+    const response = await api.post(`/api/availability/group/${groupId}/match/`, options);
     return Array.isArray(response.data) ? response.data : [];
   }
 }; 

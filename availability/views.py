@@ -9,7 +9,7 @@ from .serializers import (
     CommonAvailabilityRequestSerializer,
     GroupCommonAvailabilityRequestSerializer
 )
-from datetime import time, timedelta
+from datetime import time, timedelta, datetime, date
 from collections import defaultdict
 from groups.models import Group, GroupMembership
 from django.shortcuts import get_object_or_404
@@ -159,6 +159,59 @@ class GroupCommonAvailabilityView(generics.CreateAPIView):
     serializer_class = GroupCommonAvailabilityRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_common_slots_for_date(self, date_obj, user_ids):
+        """Helper method to find common slots for a specific date"""
+        slots = AvailabilitySlot.objects.filter(
+            user_id__in=user_ids,
+            date=date_obj,
+            is_available=True
+        )
+        
+        user_slots = defaultdict(list)
+        time_points = set()
+        for slot in slots:
+            user_slots[slot.user_id].append(slot)
+            time_points.add(slot.start_time)
+            time_points.add(slot.end_time)
+
+        if len(user_slots) < 2:
+            return []
+
+        time_points = sorted(time_points)
+        common_slots = []
+        
+        for i in range(len(time_points) - 1):
+            interval_start = time_points[i]
+            interval_end = time_points[i + 1]
+            users_info = []
+            all_available = True
+            
+            for uid in user_ids:
+                slot = next(
+                    (s for s in user_slots[uid] 
+                     if s.start_time <= interval_start and s.end_time >= interval_end),
+                    None
+                )
+                if slot:
+                    user = User.objects.get(id=uid)
+                    users_info.append({
+                        'username': user.username,
+                        'title': slot.title
+                    })
+                else:
+                    all_available = False
+                    break
+                    
+            if all_available:
+                common_slots.append({
+                    'date': date_obj,
+                    'start_time': interval_start,
+                    'end_time': interval_end,
+                    'users': users_info
+                })
+                
+        return common_slots
+
     def post(self, request, group_id, *args, **kwargs):
         group = get_object_or_404(Group, id=group_id)
         
@@ -175,53 +228,27 @@ class GroupCommonAvailabilityView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        date = serializer.validated_data['date']
-        
         user_ids = list(GroupMembership.objects.filter(
             group=group,
             accepted=True
         ).values_list('user_id', flat=True))
+        
         user_ids = list(dict.fromkeys(user_ids))
 
-        slots = AvailabilitySlot.objects.filter(
-            user_id__in=user_ids,
-            date=date,
-            is_available=True
-        )
+        all_common_slots = []
         
-        user_slots = defaultdict(list)
-        time_points = set()
-        for slot in slots:
-            user_slots[slot.user_id].append(slot)
-            time_points.add(slot.start_time)
-            time_points.add(slot.end_time)
+        if 'date' in serializer.validated_data:
+            target_date = serializer.validated_data['date']
+            common_slots = self.get_common_slots_for_date(target_date, user_ids)
+            all_common_slots.extend(common_slots)
+        else:
+            start_date = serializer.validated_data['start_date']
+            end_date = serializer.validated_data['end_date']
+            current_date = start_date
+            
+            while current_date <= end_date:
+                common_slots = self.get_common_slots_for_date(current_date, user_ids)
+                all_common_slots.extend(common_slots)
+                current_date += timedelta(days=1)
 
-        if len(user_slots) < 2:
-            return Response([])
-
-        time_points = sorted(time_points)
-        common_slots = []
-        for i in range(len(time_points) - 1):
-            interval_start = time_points[i]
-            interval_end = time_points[i + 1]
-            users_info = []
-            all_available = True
-            for uid in user_ids:
-                slot = next((s for s in user_slots[uid] if s.start_time <= interval_start and s.end_time >= interval_end), None)
-                if slot:
-                    user = User.objects.get(id=uid)
-                    users_info.append({
-                        'username': user.username,
-                        'title': slot.title
-                    })
-                else:
-                    all_available = False
-                    break
-            if all_available:
-                common_slots.append({
-                    'date': date,
-                    'start_time': interval_start,
-                    'end_time': interval_end,
-                    'users': users_info
-                })
-        return Response(common_slots)
+        return Response(all_common_slots)
