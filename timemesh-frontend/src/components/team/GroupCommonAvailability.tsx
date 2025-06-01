@@ -92,140 +92,153 @@ export const GroupCommonAvailability: React.FC<GroupCommonAvailabilityProps> = (
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Button
-              variant="outline"
-              className="w-full justify-start text-left font-normal sm:w-[240px]"
-              onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedDate ? format(selectedDate, 'PPP') : 'Pick a date'}
-            </Button>
-            
-            {isCalendarOpen && (
-              <div className="absolute top-full z-50 mt-2 rounded-md border bg-card shadow-md">
-                <DayPicker
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    setSelectedDate(date);
-                    setIsCalendarOpen(false);
-                  }}
-                  weekStartsOn={1} // Start week on Monday
-                  className="p-3"
-                />
-              </div>
-            )}
+    <div className="flex flex-col h-[calc(100vh-16rem)] max-h-[800px]">
+      {/* Fixed Header Section */}
+      <div className="flex-none">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left font-normal sm:w-[240px]"
+                onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, 'PPP') : 'Pick a date'}
+              </Button>
+              
+              {isCalendarOpen && (
+                <div className="absolute top-full z-50 mt-2 rounded-md border bg-card shadow-md">
+                  <DayPicker
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
+                      setIsCalendarOpen(false);
+                    }}
+                    weekStartsOn={1}
+                    className="p-3"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex">
+              <Button
+                variant={viewMode === 'day' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="rounded-r-none"
+                onClick={() => setViewMode('day')}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                Day
+              </Button>
+              <Button
+                variant={viewMode === 'week' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="rounded-l-none border-l border-border"
+                onClick={() => setViewMode('week')}
+              >
+                <CalendarRange className="mr-2 h-4 w-4" />
+                Week
+              </Button>
+            </div>
           </div>
 
-          <div className="flex rounded-lg border border-border">
-            <Button
-              variant={viewMode === 'day' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="rounded-r-none"
-              onClick={() => setViewMode('day')}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Day
-            </Button>
-            <Button
-              variant={viewMode === 'week' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="rounded-l-none border-l border-border"
-              onClick={() => setViewMode('week')}
-            >
-              <CalendarRange className="mr-2 h-4 w-4" />
-              Week
-            </Button>
-          </div>
+          <Button
+            onClick={handleFindCommonTimes}
+            disabled={!selectedDate || isLoading}
+            className="w-full sm:w-auto"
+          >
+            {isLoading ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Loading...
+              </div>
+            ) : (
+              <>
+                <Clock className="mr-2 h-4 w-4" />
+                Find Common Times
+              </>
+            )}
+          </Button>
         </div>
 
-        <Button
-          onClick={handleFindCommonTimes}
-          disabled={!selectedDate || isLoading}
-          className="w-full sm:w-auto"
-        >
-          {isLoading ? (
-            <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-              Loading...
-            </div>
-          ) : (
-            <>
-              <Clock className="mr-2 h-4 w-4" />
-              Find Common Times
-            </>
-          )}
-        </Button>
+        {error && (
+          <div className="rounded-lg bg-destructive/10 p-4 text-destructive mb-4">
+            {error}
+          </div>
+        )}
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-destructive/10 p-4 text-destructive">
-          {error}
-        </div>
-      )}
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto min-h-0 rounded-lg border border-border">
+        {!error && commonSlots.length === 0 && !isLoading && selectedDate && (
+          <div className="flex flex-col items-center justify-center h-full text-center p-6">
+            <div className="bg-secondary/10 rounded-full p-6 mb-4">
+              <Clock className="h-12 w-12 text-muted-foreground/50" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">No Common Times Found</h3>
+            <p className="text-muted-foreground max-w-sm">
+              Select a <span className="font-medium text-foreground">{viewMode}</span> and click{' '}
+              <span className="font-medium text-foreground">"Find Common Times"</span>{' '}
+              to see when team members are available.
+            </p>
+          </div>
+        )}
 
-      {!error && commonSlots.length === 0 && !isLoading && selectedDate && (
-        <div className="text-center py-8 text-muted-foreground">
-          <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>
-            Select a {viewMode} and click "Find Common Times" to see when team members are available.
-          </p>
-        </div>
-      )}
-
-      {commonSlots.length > 0 && (
-        <div className="space-y-6">
-          {groupSlotsByDate(commonSlots).map(([date, slots]) => (
-            <div key={date} className="space-y-3">
-              <h4 className="font-medium flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-primary" />
-                {formatDate(date)}
-              </h4>
-              <div className="grid gap-3">
-                {slots.map((slot, index) => (
-                  <div
-                    key={`${date}-${index}`}
-                    className="rounded-lg border border-border p-4 hover:border-primary/50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {slot.users.length} members available
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2 grid gap-1">
-                      {slot.users.map((user, userIndex) => (
-                        <div
-                          key={userIndex}
-                          className="text-sm text-muted-foreground flex items-center justify-between"
-                        >
-                          <span>{user.username}</span>
-                          <span className="text-xs bg-secondary/20 px-2 py-0.5 rounded">
-                            {user.title}
+        {commonSlots.length > 0 && (
+          <div className="divide-y divide-border">
+            {groupSlotsByDate(commonSlots).map(([date, slots]) => (
+              <div key={date} className="p-4">
+                <h4 className="font-medium flex items-center gap-2 sticky top-0 bg-card py-2 z-10">
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  {formatDate(date)}
+                </h4>
+                <div className="grid gap-3 mt-3">
+                  {slots.map((slot, index) => (
+                    <div
+                      key={`${date}-${index}`}
+                      className="rounded-lg border border-border p-4 hover:border-primary/50 transition-colors bg-card"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">
+                            {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                           </span>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            {slot.users.length} members available
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 pt-2 border-t border-border">
+                        {slot.users.map((user, userIndex) => (
+                          <div
+                            key={userIndex}
+                            className="text-sm text-muted-foreground flex items-center justify-between"
+                          >
+                            <span>{user.username}</span>
+                            {user.title && (
+                              <span className="text-xs bg-secondary/20 px-2 py-0.5 rounded">
+                                {user.title}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }; 
