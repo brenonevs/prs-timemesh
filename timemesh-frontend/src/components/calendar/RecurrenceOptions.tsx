@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { Calendar as CalendarIcon, Repeat, X } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -35,7 +35,51 @@ export const RecurrenceOptions: React.FC<RecurrenceOptionsProps> = ({
   startDate,
   onClose
 }) => {
-  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
+        setIsCalendarOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isCalendarOpen && buttonRef.current && calendarRef.current) {
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const calendarRect = calendarRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+
+      const spaceBelow = viewportHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+
+      let top = buttonRect.bottom + window.scrollY;
+      let left = buttonRect.left + window.scrollX;
+
+      if (spaceBelow < calendarRect.height && spaceAbove > calendarRect.height) {
+        top = buttonRect.top - calendarRect.height + window.scrollY;
+      }
+
+      if (left + calendarRect.width > viewportWidth) {
+        left = viewportWidth - calendarRect.width - 16; 
+      }
+
+      left = Math.max(16, left); 
+
+      setCalendarPosition({ top, left });
+    }
+  }, [isCalendarOpen]);
 
   const handleRepeatTypeChange = (type: RepeatType) => {
     const newOptions: RecurrenceOptions = {
@@ -114,6 +158,7 @@ export const RecurrenceOptions: React.FC<RecurrenceOptionsProps> = ({
           <div className="space-y-3 animate-in fade-in-50">
             <div className="relative">
               <Button
+                ref={buttonRef}
                 variant="outline"
                 className="w-full justify-start text-left font-normal"
                 onClick={() => setIsCalendarOpen(!isCalendarOpen)}
@@ -125,7 +170,19 @@ export const RecurrenceOptions: React.FC<RecurrenceOptionsProps> = ({
               </Button>
               
               {isCalendarOpen && (
-                <div className="absolute top-full z-50 mt-2 rounded-md border bg-card shadow-md">
+                <div
+                  ref={calendarRef}
+                  className="fixed z-50 rounded-md border bg-card shadow-md"
+                  style={{
+                    position: 'fixed',
+                    top: `${calendarPosition.top}px`,
+                    left: `${calendarPosition.left}px`,
+                    zIndex: 50,
+                    visibility: isCalendarOpen ? 'visible' : 'hidden',
+                    opacity: isCalendarOpen ? 1 : 0,
+                    transition: 'opacity 150ms ease-in-out',
+                  }}
+                >
                   <DayPicker
                     mode="single"
                     selected={value.end_date}
