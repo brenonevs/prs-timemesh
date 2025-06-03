@@ -45,7 +45,7 @@ const InvitesDropdown: React.FC<InvitesDropdownProps> = ({
         >
           <Tooltip content={
             invites.length === 0
-              ? "Nenhum convite pendente"
+              ? "No pending invites"
               : invites.map(i => i.group?.name || i.groupName).join(', ')
           }>
             {open ? <MailOpen className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
@@ -63,12 +63,12 @@ const InvitesDropdown: React.FC<InvitesDropdownProps> = ({
         sideOffset={20}
       >
         <div className="p-4 border-b">
-          <h3 className="text-base font-semibold">Convites para Grupos</h3>
+          <h3 className="text-base font-semibold">Group Invites</h3>
         </div>
         <div className="max-h-80 overflow-y-auto p-2">
           {invites.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              Nenhum convite pendente
+              No pending invites
             </div>
           ) : (
             invites.map((invite) => (

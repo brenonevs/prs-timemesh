@@ -6,6 +6,7 @@ import { Label } from '../ui/Label';
 import { Plus } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { groupsService } from '../../services/groups';
+import { useModalRegistration } from '../../context/ModalContext';
 
 interface CreateTeamFormProps {
   onTeamCreated: () => void;
@@ -17,23 +18,26 @@ export const CreateTeamForm = ({ onTeamCreated }: CreateTeamFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Register with modal context
+  useModalRegistration(isOpen, 'create-team-modal');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await groupsService.createGroup({ name, description: '' });
+      await groupsService.createGroup({ name });
       toast({
-        title: 'Time criado com sucesso!',
-        description: 'O time foi criado e você já é membro dele.',
+        title: 'Team created!',
+        description: 'Your new team has been created successfully.',
       });
-      setIsOpen(false);
-      setName('');
       onTeamCreated();
+      setName('');
+      setIsOpen(false);
     } catch (error) {
       toast({
-        title: 'Erro ao criar time',
-        description: 'Ocorreu um erro ao criar o time. Tente novamente.',
+        title: 'Error creating team',
+        description: 'Failed to create team. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -53,18 +57,19 @@ export const CreateTeamForm = ({ onTeamCreated }: CreateTeamFormProps) => {
         <DialogHeader>
           <DialogTitle>Create New Team</DialogTitle>
           <DialogDescription id="create-team-description">
-            Create a new team and start inviting members
+            Create a new team and start collaborating with others. You can invite members after creating the team.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do Time</Label>
+            <Label htmlFor="name">Team Name</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Digite o nome do time"
+              placeholder="Enter team name"
               required
+              aria-label="Team name"
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -74,10 +79,10 @@ export const CreateTeamForm = ({ onTeamCreated }: CreateTeamFormProps) => {
               onClick={() => setIsOpen(false)}
               disabled={isLoading}
             >
-              Cancelar
+              Cancel
             </Button>
             <Button type="submit" variant="primary" disabled={isLoading}>
-              {isLoading ? 'Criando...' : 'Criar Time'}
+              {isLoading ? 'Creating...' : 'Create Team'}
             </Button>
           </div>
         </form>

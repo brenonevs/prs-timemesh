@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { groupsService } from '../../services/groups';
 import { useToast } from '../../hooks/useToast';
 import { useInvites } from '../../context/InvitesContext';
+import { useModalRegistration } from '../../context/ModalContext';
 
 interface InviteUserModalProps {
   open: boolean;
@@ -17,6 +18,9 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ open, onClose, groupI
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { refreshInvites } = useInvites();
+
+  // Register this modal with the modal context
+  useModalRegistration(open, `invite-user-${groupId}`);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,9 +62,9 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ open, onClose, groupI
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent aria-describedby="invite-user-description">
         <DialogHeader>
-          <DialogTitle className="text-center">Invite User</DialogTitle>
+          <DialogTitle>Invite User</DialogTitle>
           <DialogDescription id="invite-user-description">
-            Enter a username to invite them to join the team
+            Enter a username to invite them to join the team. They will receive a notification to accept or decline the invitation.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleInvite} className="flex flex-col gap-4 mt-2">
@@ -71,6 +75,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ open, onClose, groupI
             required
             disabled={isLoading}
             className="w-full"
+            aria-label="Username to invite"
           />
           <Button type="submit" isLoading={isLoading} disabled={isLoading} className="w-full">
             {isLoading ? 'Sending...' : 'Invite'}

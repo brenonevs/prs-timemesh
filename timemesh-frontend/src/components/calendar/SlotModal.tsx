@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { X, AlertCircle, Tag, Clock, Repeat } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/Dialog';
 import { RecurrenceOptions } from './RecurrenceOptions';
+import { useModalRegistration } from '../../context/ModalContext';
 import type { RecurrenceOptions as RecurrenceOptionsType } from './RecurrenceOptions';
 
 interface TimeSlot {
@@ -30,25 +32,36 @@ interface SlotModalProps {
 export const SlotModal: React.FC<SlotModalProps> = ({ slot, onClose, onSave }) => {
   const slots = Array.isArray(slot) ? slot : [slot];
   const firstSlot = slots[0];
-  const [title, setTitle] = useState(firstSlot.title || '');
-  const [isAvailable, setIsAvailable] = useState(firstSlot.is_available);
-  const [showRecurrence, setShowRecurrence] = useState(false);
-  const [recurrence, setRecurrence] = useState<RecurrenceOptionsType>({
-    repeat_type: 'none'
-  });
+  
+  // Create a stable modal ID based on slot data to prevent registration issues
+  const modalId = useMemo(() => {
+    const slotIds = slots.map(s => `${s.date}-${s.start_time}-${s.end_time}`).join('|');
+    return `slot-modal-${slotIds}`;
+  }, [slots]);
+  
+  // Register this modal with the modal context
+  useModalRegistration(true, modalId);
+  
+  // Initialize state with stable values to prevent unnecessary re-renders
+  const [state, setState] = useState(() => ({
+    title: firstSlot.title || '',
+    isAvailable: firstSlot.is_available,
+    showRecurrence: false,
+    recurrence: { repeat_type: 'none' } as RecurrenceOptionsType
+  }));
 
   const handleSave = () => {
     const data = {
-      title: isAvailable ? title : undefined,
-      is_available: isAvailable,
-      ...(recurrence.repeat_type !== 'none' && {
+      title: state.isAvailable ? state.title : undefined,
+      is_available: state.isAvailable,
+      ...(state.recurrence.repeat_type !== 'none' && {
         recurrence: {
-          repeat_type: recurrence.repeat_type,
-          ...(recurrence.end_date && {
-            end_date: format(recurrence.end_date, 'yyyy-MM-dd')
+          repeat_type: state.recurrence.repeat_type,
+          ...(state.recurrence.end_date && {
+            end_date: format(state.recurrence.end_date, 'yyyy-MM-dd')
           }),
-          ...(recurrence.weekdays && {
-            weekdays: recurrence.weekdays
+          ...(state.recurrence.weekdays && {
+            weekdays: state.recurrence.weekdays
           })
         }
       })
@@ -57,22 +70,21 @@ export const SlotModal: React.FC<SlotModalProps> = ({ slot, onClose, onSave }) =
     onClose();
   };
 
+  const updateState = (updates: Partial<typeof state>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-xl p-6 w-full max-w-md shadow-xl animate-fadeIn">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Manage Time Slots</h3>
-            <p className="text-sm text-muted-foreground">
-              {slots.length > 1 
-                ? `${slots.length} slots selected`
-                : format(new Date(firstSlot.date), 'EEEE, MMMM d, yyyy')}
-            </p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-secondary/20 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent aria-describedby="slot-modal-description">
+        <DialogHeader>
+          <DialogTitle>Manage Time Slots</DialogTitle>
+          <DialogDescription id="slot-modal-description">
+            {slots.length > 1 
+              ? `Configure ${slots.length} selected time slots`
+              : `Configure time slot for ${format(new Date(firstSlot.date), 'EEEE, MMMM d, yyyy')}`}
+          </DialogDescription>
+        </DialogHeader>
         
         <div className="space-y-4">
           {/* Time Display */}
@@ -92,7 +104,7 @@ export const SlotModal: React.FC<SlotModalProps> = ({ slot, onClose, onSave }) =
           {slots.length > 1 && (
             <div className="max-h-32 overflow-y-auto space-y-2 p-2 bg-secondary/10 rounded-lg">
               {slots.map((s, index) => (
-                <div key={index} className="text-sm flex justify-between items-center">
+                <div key={`${s.date}-${s.start_time}-${index}`} className="text-sm flex justify-between items-center">
                   <span>{format(new Date(s.date), 'MMM d')}</span>
                   <span className="text-muted-foreground">
                     {format(new Date(`2000-01-01T${s.start_time}`), 'h:mm a')} - 
@@ -113,9 +125,9 @@ export const SlotModal: React.FC<SlotModalProps> = ({ slot, onClose, onSave }) =
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsAvailable(true)}
+                onClick={() => updateState({ isAvailable: true })}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  isAvailable 
+                  state.isAvailable 
                     ? 'bg-success/20 text-success-foreground'
                     : 'hover:bg-secondary/20'
                 }`}
@@ -123,9 +135,9 @@ export const SlotModal: React.FC<SlotModalProps> = ({ slot, onClose, onSave }) =
                 Available
               </button>
               <button
-                onClick={() => setIsAvailable(false)}
+                onClick={() => updateState({ isAvailable: false })}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  !isAvailable 
+                  !state.isAvailable 
                     ? 'bg-destructive/20 text-destructive-foreground'
                     : 'hover:bg-secondary/20'
                 }`}
@@ -136,13 +148,13 @@ export const SlotModal: React.FC<SlotModalProps> = ({ slot, onClose, onSave }) =
           </div>
 
           {/* Title Input */}
-          {isAvailable && (
+          {state.isAvailable && (
             <div>
               <label className="block text-sm font-medium mb-1.5">Label</label>
               <input
                 type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={state.title}
+                onChange={(e) => updateState({ title: e.target.value })}
                 placeholder="E.g., Meeting, Study, Exercise"
                 className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
@@ -154,26 +166,26 @@ export const SlotModal: React.FC<SlotModalProps> = ({ slot, onClose, onSave }) =
             <Button
               variant="outline"
               className="w-full justify-start"
-              onClick={() => setShowRecurrence(!showRecurrence)}
+              onClick={() => updateState({ showRecurrence: !state.showRecurrence })}
             >
               <Repeat className="mr-2 h-4 w-4" />
-              {recurrence.repeat_type === 'none'
+              {state.recurrence.repeat_type === 'none'
                 ? 'Add recurrence'
                 : 'Edit recurrence'}
             </Button>
           )}
 
           {/* Recurrence Options */}
-          {showRecurrence && slots.length === 1 && (
+          {state.showRecurrence && slots.length === 1 && (
             <RecurrenceOptions
-              value={recurrence}
-              onChange={setRecurrence}
+              value={state.recurrence}
+              onChange={(recurrence) => updateState({ recurrence })}
               startDate={new Date(firstSlot.date)}
-              onClose={() => setShowRecurrence(false)}
+              onClose={() => updateState({ showRecurrence: false })}
             />
           )}
 
-          {!isAvailable && (
+          {!state.isAvailable && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
               <AlertCircle className="w-5 h-5 mt-0.5" />
               <p className="text-sm">
@@ -191,7 +203,7 @@ export const SlotModal: React.FC<SlotModalProps> = ({ slot, onClose, onSave }) =
             Save Changes
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }; 

@@ -377,8 +377,8 @@ export const CalendarPage = () => {
 
   const weekDates = getWeekDates();
 
-  if (isLoading) return <div>Carregando agenda...</div>;
-  if (isError) return <div>Erro ao carregar agenda.</div>;
+  if (isLoading) return <div>Loading calendar...</div>;
+  if (isError) return <div>Error loading calendar.</div>;
 
   return (
     <MainLayout>

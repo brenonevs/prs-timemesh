@@ -33,7 +33,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, onDelete }) => {
             <div className="flex items-center gap-2 mt-1">
               <Users className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
-                {team.members.length} membros
+                {team.members.length} members
               </span>
             </div>
           </div>
@@ -51,7 +51,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, onDelete }) => {
 
             {isOwner && (
               <>
-                <Tooltip content="Convidar usuário">
+                <Tooltip content="Invite user">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -72,7 +72,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, onDelete }) => {
                       className="text-destructive focus:text-destructive"
                       onClick={() => onDelete(team.id)}
                     >
-                      Deletar time
+                      Delete team
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

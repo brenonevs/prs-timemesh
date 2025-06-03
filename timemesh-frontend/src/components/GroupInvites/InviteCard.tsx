@@ -21,10 +21,10 @@ const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onReject, isL
             {invite.group?.name || invite.groupName || (typeof invite.group === 'string' ? invite.group : '')}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Grupo: <b>{invite.group?.name || invite.groupName || (typeof invite.group === 'string' ? invite.group : '')}</b>
+            Group: <b>{invite.group?.name || invite.groupName || (typeof invite.group === 'string' ? invite.group : '')}</b>
           </p>
           <p className="text-sm text-muted-foreground">
-            Convidado por {invite.invited_by || invite.invitedByName}
+            Invited by {invite.invited_by || invite.invitedByName}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             {formatDistanceToNow(new Date(invite.invited_at || invite.invitedAt), { addSuffix: true })}
@@ -38,7 +38,7 @@ const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onReject, isL
           onClick={() => onReject(invite)}
           disabled={isLoading}
         >
-          <X className="w-4 h-4 mr-1" /> Recusar
+          <X className="w-4 h-4 mr-1" /> Reject
         </Button>
         <Button 
           variant="default"
@@ -47,7 +47,7 @@ const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onReject, isL
           disabled={isLoading}
           className="bg-primary hover:bg-primary/90"
         >
-          <Check className="w-4 h-4 mr-1" /> Aceitar
+          <Check className="w-4 h-4 mr-1" /> Accept
         </Button>
       </CardFooter>
     </Card>

@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/Dialog';
 import { Group, GroupMember, groupsService } from '../../services/groups';
 import { formatDistanceToNow } from 'date-fns';
-import { Users, Calendar, UserPlus } from 'lucide-react';
+import { Users, Calendar, UserPlus, Star } from 'lucide-react';
 import { Button } from '../ui/Button';
 import InviteUserModal from '../GroupInvites/InviteUserModal';
 import { useAuth } from '../../hooks/useAuth';
 import { GroupCommonAvailability } from './GroupCommonAvailability';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { useModalRegistration } from '../../context/ModalContext';
 
 interface GroupDetailsProps {
   group: Group;
@@ -41,12 +42,18 @@ export const GroupDetails: React.FC<GroupDetailsProps> = ({ group, open, onClose
     }
   };
 
+  // Register this modal with the modal context
+  useModalRegistration(open, `group-details-${group.id}`);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl" aria-describedby="group-details-description">
           <DialogHeader>
-            <DialogTitle>{group.name}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              {group.name}
+            </DialogTitle>
             <DialogDescription id="group-details-description">
               View and manage team members and common availability
             </DialogDescription>

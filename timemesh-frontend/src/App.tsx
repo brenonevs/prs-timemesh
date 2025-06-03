@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { TeamsProvider } from './context/TeamsContext';
 import { InvitesProvider } from './context/InvitesContext';
+import { ModalProvider } from './context/ModalContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from './components/ui/toaster';
 
@@ -32,49 +33,51 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Router future={router.future}>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/success" element={<SuccessPage />} />
-              
-              {/* Protected routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <TeamsProvider>
-                    <InvitesProvider>
-                      <Dashboard />
-                    </InvitesProvider>
-                  </TeamsProvider>
-                </ProtectedRoute>
-              } />
-              <Route path="/calendar" element={
-                <ProtectedRoute>
-                  <TeamsProvider>
-                    <InvitesProvider>
-                      <CalendarPage />
-                    </InvitesProvider>
-                  </TeamsProvider>
-                </ProtectedRoute>
-              } />
-              <Route path="/team" element={
-                <ProtectedRoute>
-                  <TeamsProvider>
-                    <InvitesProvider>
-                      <TeamPage />
-                    </InvitesProvider>
-                  </TeamsProvider>
-                </ProtectedRoute>
-              } />
-              
-              {/* Redirect root to login */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              
-              {/* 404 Page */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Router>
+          <ModalProvider>
+            <Router future={router.future}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/success" element={<SuccessPage />} />
+                
+                {/* Protected routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <TeamsProvider>
+                      <InvitesProvider>
+                        <Dashboard />
+                      </InvitesProvider>
+                    </TeamsProvider>
+                  </ProtectedRoute>
+                } />
+                <Route path="/calendar" element={
+                  <ProtectedRoute>
+                    <TeamsProvider>
+                      <InvitesProvider>
+                        <CalendarPage />
+                      </InvitesProvider>
+                    </TeamsProvider>
+                  </ProtectedRoute>
+                } />
+                <Route path="/team" element={
+                  <ProtectedRoute>
+                    <TeamsProvider>
+                      <InvitesProvider>
+                        <TeamPage />
+                      </InvitesProvider>
+                    </TeamsProvider>
+                  </ProtectedRoute>
+                } />
+                
+                {/* Redirect root to login */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                
+                {/* 404 Page */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Router>
+          </ModalProvider>
         </AuthProvider>
       </ThemeProvider>
       <Toaster />
