@@ -99,11 +99,11 @@ WSGI_APPLICATION = 'timemesh.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+        'NAME': os.getenv('DB_NAME', config('DB_NAME')),
+        'USER': os.getenv('DB_USER', config('DB_USER')),
+        'PASSWORD': os.getenv('DB_PASSWORD', config('DB_PASSWORD')),
+        'HOST': os.getenv('DB_HOST', config('DB_HOST')),
+        'PORT': os.getenv('DB_PORT', config('DB_PORT')),
     }
 }
 
@@ -153,6 +153,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://localhost:5173",
+    "https://timemesh-frontend.onrender.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
