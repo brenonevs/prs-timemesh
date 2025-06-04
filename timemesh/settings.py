@@ -174,3 +174,7 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://mesh-575184900812.southamerica-east1.run.app"
+]
