@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import { MainLayout } from '../../layouts/MainLayout';
 import { Clock, Tag, X, AlertCircle, Trash2, CheckCircle2, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -134,6 +134,73 @@ const fetchSlots = async () => {
   return response;
 };
 
+const DRAG_THRESHOLD = 5;
+const MOUSE_MOVE_DEBOUNCE = 16; 
+
+interface TimeSlotProps {
+  day: string;
+  hour: number;
+  slot: ApiTimeSlot | undefined;
+  isInSelection: boolean;
+  mouseDownButton?: number;
+  date: Date;
+}
+
+const TimeSlotCell = memo(({ day, hour, slot, isInSelection, mouseDownButton, date }: TimeSlotProps) => {
+  const slotId = `${day}-${hour}`;
+  
+  return (
+    <div
+      data-slot-id={slotId}
+      className={`time-slot group relative inset-0 transition-colors cursor-pointer ${
+        isInSelection
+          ? mouseDownButton === 2
+            ? 'bg-destructive/60'
+            : 'bg-success/60'
+          : slot
+            ? slot.is_available
+              ? 'bg-success/20 hover:bg-success/30'
+              : 'bg-destructive/20 hover:bg-destructive/30'
+            : 'hover:bg-secondary/10'
+      }`}
+    >
+      <div className="absolute inset-0 p-1.5">
+        {isInSelection && mouseDownButton === 2 && slot && (
+          <div className="absolute inset-0 flex items-center justify-center bg-destructive/30">
+            <CheckCircle2 className="w-4 h-4 text-destructive" />
+          </div>
+        )}
+        {(!isInSelection || mouseDownButton !== 2) && slot && (
+          <>
+            {slot.title && (
+              <div className="flex items-center gap-1 text-[10px] font-medium bg-secondary/20 text-foreground px-1.5 py-0.5 rounded">
+                <Tag className="w-3 h-3" />
+                {slot.title}
+              </div>
+            )}
+            {slot.notes && (
+              <div className="absolute inset-x-1.5 bottom-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-[10px] text-muted-foreground line-clamp-1">
+                  {slot.notes}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.day === nextProps.day &&
+    prevProps.hour === nextProps.hour &&
+    prevProps.isInSelection === nextProps.isInSelection &&
+    prevProps.mouseDownButton === nextProps.mouseDownButton &&
+    prevProps.date === nextProps.date &&
+    JSON.stringify(prevProps.slot) === JSON.stringify(nextProps.slot)
+  );
+});
+
 export const CalendarPage = () => {
   const { data: timeSlots = [], isLoading, isError } = useQuery<ApiTimeSlot[]>({
     queryKey: ['slots'],
@@ -149,6 +216,62 @@ export const CalendarPage = () => {
   
   const gridRef = useRef<HTMLDivElement>(null);
   const modalTimeoutRef = useRef<number>();
+  const lastMoveTime = useRef(0);
+
+  const weekDates = useMemo(() => {
+    const monday = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    return WEEKDAYS.map((_, index) => addDays(monday, index));
+  }, [selectedDate]);
+
+  const slotLookupMap = useMemo(() => {
+    const map = new Map();
+    timeSlots.forEach((slot: ApiTimeSlot) => {
+      const key = `${slot.date}-${slot.start_time}`;
+      map.set(key, slot);
+    });
+    return map;
+  }, [timeSlots]);
+
+  const findSlot = useCallback((date: string, hour: number) => {
+    const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
+    const key = `${date}-${startTime}`;
+    return slotLookupMap.get(key);
+  }, [slotLookupMap]);
+
+  const getSelectedSlots = useCallback((start: { day: string; hour: number }, end: { day: string; hour: number }) => {
+    const startDayIndex = WEEKDAYS.indexOf(start.day);
+    const endDayIndex = WEEKDAYS.indexOf(end.day);
+    const startHourIndex = HOURS.indexOf(start.hour);
+    const endHourIndex = HOURS.indexOf(end.hour);
+    
+    const minDayIndex = Math.min(startDayIndex, endDayIndex);
+    const maxDayIndex = Math.max(startDayIndex, endDayIndex);
+    const minHourIndex = Math.min(startHourIndex, endHourIndex);
+    const maxHourIndex = Math.max(startHourIndex, endHourIndex);
+    
+    const selectedSlots: TimeSlot[] = [];
+    
+    for (let dayIndex = minDayIndex; dayIndex <= maxDayIndex; dayIndex++) {
+      for (let hourIndex = minHourIndex; hourIndex <= maxHourIndex; hourIndex++) {
+        const day = WEEKDAYS[dayIndex];
+        const hour = HOURS[hourIndex];
+        const formattedDate = format(weekDates[dayIndex], 'yyyy-MM-dd');
+        const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
+        const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
+        
+        const existingSlot = findSlot(formattedDate, hour) || {
+          date: formattedDate,
+          start_time: startTime,
+          end_time: endTime,
+          is_available: true
+        };
+        
+        selectedSlots.push(existingSlot as TimeSlot);
+      }
+    }
+    
+    return selectedSlots;
+  }, [weekDates, findSlot]);
 
   useEffect(() => {
     return () => {
@@ -186,15 +309,21 @@ export const CalendarPage = () => {
     setIsDragging(false);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!mouseDown) return;
+
+    const now = Date.now();
+    if (now - lastMoveTime.current < MOUSE_MOVE_DEBOUNCE) {
+      return;
+    }
+    lastMoveTime.current = now;
 
     const distance = Math.sqrt(
       Math.pow(e.clientX - mouseDown.x, 2) + 
       Math.pow(e.clientY - mouseDown.y, 2)
     );
 
-    if (distance > 5) {
+    if (distance > DRAG_THRESHOLD) {
       setIsDragging(true);
     }
     
@@ -202,10 +331,34 @@ export const CalendarPage = () => {
     const slot = getSlotFromElement(target);
     if (!slot) return;
     
-    setCurrentHover(slot);
-  };
+    if (slot.day !== currentHover?.day || slot.hour !== currentHover?.hour) {
+      setCurrentHover(slot);
+    }
+  }, [mouseDown, currentHover]);
 
-  const handleMouseUp = async () => {
+  const updateSelection = useCallback((start: { day: string; hour: number }, end: { day: string; hour: number }) => {
+    const slots = getSelectedSlots(start, end);
+    const modalSlots = slots.map(slot => ({
+      date: slot.date!,
+      start_time: slot.start_time!,
+      end_time: slot.end_time!,
+      title: slot.title || '',
+      is_available: slot.is_available ?? true
+    }));
+
+    requestAnimationFrame(() => {
+      setSelectedSlots(modalSlots);
+      if (!isDragging) {
+        setShowSlotModal(true);
+      } else {
+        modalTimeoutRef.current = window.setTimeout(() => {
+          setShowSlotModal(true);
+        }, 200);
+      }
+    });
+  }, [getSelectedSlots, isDragging]);
+
+  const handleMouseUp = useCallback(async () => {
     if (!mouseDown || !currentHover) {
       setMouseDown(null);
       setCurrentHover(null);
@@ -214,7 +367,7 @@ export const CalendarPage = () => {
 
     const slots = getSelectedSlots(mouseDown, currentHover);
     
-    if (mouseDown.button === 2) { // Right click - Delete slots
+    if (mouseDown.button === 2) {
       try {
         const slotsToDelete = slots.map((slot: TimeSlot) => ({
           date: slot.date!,
@@ -223,91 +376,21 @@ export const CalendarPage = () => {
           is_available: slot.is_available ?? true
         }));
 
-        const result = await availabilityService.batchDeleteSlots(slotsToDelete);
-        
-        if (result.errors && result.errors.length > 0) {
-          console.error('Some slots failed to delete:', result.errors);
-        }
-
+        await availabilityService.batchDeleteSlots(slotsToDelete);
         queryClient.invalidateQueries({ queryKey: ['slots'] });
       } catch (error) {
         console.error('Error deleting time slots:', error);
       }
-    } else if (mouseDown.button === 0) { // Left click - Create/Update slots
-      const selectedModalSlots = slots.map(slot => {
-        const dayIndex = WEEKDAYS.indexOf(slot.day);
-        const slotDate = weekDates[dayIndex];
-        const formattedDate = format(slotDate, 'yyyy-MM-dd');
-        const startTime = `${slot.hour.toString().padStart(2, '0')}:00:00`;
-        const endTime = `${(slot.hour + 1).toString().padStart(2, '0')}:00:00`;
-
-        const existingSlot = timeSlots.find((s: any) => 
-          s.date === formattedDate && 
-          s.start_time === startTime && 
-          s.end_time === endTime
-        );
-
-        return {
-          date: formattedDate,
-          start_time: startTime,
-          end_time: endTime,
-          title: existingSlot?.title || '',
-          is_available: existingSlot?.is_available ?? true
-        };
-      });
-
-      setSelectedSlots(selectedModalSlots);
-      
-      if (!isDragging) {
-        setShowSlotModal(true);
-      } else {
-        modalTimeoutRef.current = window.setTimeout(() => {
-          setShowSlotModal(true);
-        }, 200);
-      }
+    } else if (mouseDown.button === 0) {
+      updateSelection(mouseDown, currentHover);
     }
 
-    setMouseDown(null);
-    setCurrentHover(null);
-    setIsDragging(false);
-  };
-
-  const getSelectedSlots = (start: { day: string; hour: number }, end: { day: string; hour: number }) => {
-    const startDayIndex = WEEKDAYS.indexOf(start.day);
-    const endDayIndex = WEEKDAYS.indexOf(end.day);
-    const startHourIndex = HOURS.indexOf(start.hour);
-    const endHourIndex = HOURS.indexOf(end.hour);
-    
-    const minDayIndex = Math.min(startDayIndex, endDayIndex);
-    const maxDayIndex = Math.max(startDayIndex, endDayIndex);
-    const minHourIndex = Math.min(startHourIndex, endHourIndex);
-    const maxHourIndex = Math.max(startHourIndex, endHourIndex);
-    
-    const selectedSlots: TimeSlot[] = [];
-    
-    for (let dayIndex = minDayIndex; dayIndex <= maxDayIndex; dayIndex++) {
-      for (let hourIndex = minHourIndex; hourIndex <= maxHourIndex; hourIndex++) {
-        const day = WEEKDAYS[dayIndex];
-        const hour = HOURS[hourIndex];
-        const slotId = `${day}-${hour}`;
-        
-        const existingSlot = timeSlots.find((slot: ApiTimeSlot) => slot.id === slotId) || {
-          id: slotId,
-          day,
-          hour,
-          isAvailable: true,
-          date: format(weekDates[dayIndex], 'yyyy-MM-dd'),
-          start_time: `${hour.toString().padStart(2, '0')}:00:00`,
-          end_time: `${(hour + 1).toString().padStart(2, '0')}:00:00`,
-          is_available: true
-        };
-        
-        selectedSlots.push(existingSlot as TimeSlot);
-      }
-    }
-    
-    return selectedSlots;
-  };
+    requestAnimationFrame(() => {
+      setMouseDown(null);
+      setCurrentHover(null);
+      setIsDragging(false);
+    });
+  }, [mouseDown, currentHover, getSelectedSlots, updateSelection, queryClient]);
 
   const saveSlotChanges = async (data: SaveSlotData) => {
     try {
@@ -323,7 +406,6 @@ export const CalendarPage = () => {
       const result = await availabilityService.batchCreateSlots(slotsToSave);
       
       if (result.errors && result.errors.length > 0) {
-        // Log only unique error messages to avoid spam
         const uniqueErrors = new Set(result.errors.map(e => e.error));
         console.log('Some slots were already scheduled:', Array.from(uniqueErrors));
       }
@@ -344,14 +426,12 @@ export const CalendarPage = () => {
     };
   };
 
-  const getSlotInfo = (day: string, hour: number) => {
-    return timeSlots.find((slot: ApiTimeSlot) => 
-      slot.id === `${day}-${hour}` && 
-      (!slot.date || new Date(slot.date).toDateString() === selectedDate.toDateString())
-    );
-  };
+  const getSlotInfo = useCallback((day: string, hour: number) => {
+    const slotId = `${day}-${hour}`;
+    return timeSlots.find((slot: ApiTimeSlot) => slot.id === slotId);
+  }, [timeSlots]);
 
-  const isSlotInSelection = (day: string, hour: number) => {
+  const isSlotInSelection = useCallback((day: string, hour: number) => {
     if (!mouseDown || !currentHover) return false;
     
     const startDayIndex = WEEKDAYS.indexOf(mouseDown.day);
@@ -362,20 +442,18 @@ export const CalendarPage = () => {
     const dayIndex = WEEKDAYS.indexOf(day);
     const hourIndex = HOURS.indexOf(hour);
     
+    const minDayIndex = Math.min(startDayIndex, endDayIndex);
+    const maxDayIndex = Math.max(startDayIndex, endDayIndex);
+    const minHourIndex = Math.min(startHourIndex, endHourIndex);
+    const maxHourIndex = Math.max(startHourIndex, endHourIndex);
+
     return (
-      dayIndex >= Math.min(startDayIndex, endDayIndex) &&
-      dayIndex <= Math.max(startDayIndex, endDayIndex) &&
-      hourIndex >= Math.min(startHourIndex, endHourIndex) &&
-      hourIndex <= Math.max(startHourIndex, endHourIndex)
+      dayIndex >= minDayIndex &&
+      dayIndex <= maxDayIndex &&
+      hourIndex >= minHourIndex &&
+      hourIndex <= maxHourIndex
     );
-  };
-
-  const getWeekDates = () => {
-    const monday = startOfWeek(selectedDate, { weekStartsOn: 1 });
-    return WEEKDAYS.map((_, index) => addDays(monday, index));
-  };
-
-  const weekDates = getWeekDates();
+  }, [mouseDown, currentHover]);
 
   if (isLoading) return <div>Loading calendar...</div>;
   if (isError) return <div>Error loading calendar.</div>;
@@ -423,6 +501,7 @@ export const CalendarPage = () => {
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onContextMenu={(e) => e.preventDefault()}
+          style={{ touchAction: 'none' }} 
         >
           <div className="grid grid-cols-8 divide-x divide-border border-b border-border">
             <div className="p-2 text-xs font-medium text-muted-foreground">
@@ -457,54 +536,19 @@ export const CalendarPage = () => {
                     </div>
                   </div>
                   {WEEKDAYS.map((day, colIdx) => {
-                    const slot = timeSlots.find((s: any) =>
-                      s.date === format(weekDates[colIdx], 'yyyy-MM-dd') &&
-                      s.start_time === `${hour.toString().padStart(2, '0')}:00:00`
-                    );
-                    const isInSelection = isSlotInSelection(day, hour);
-                    const slotId = `${day}-${hour}`;
+                    const formattedDate = format(weekDates[colIdx], 'yyyy-MM-dd');
+                    const slot = findSlot(formattedDate, hour);
                     
                     return (
-                      <div
-                        key={slotId}
-                        data-slot-id={slotId}
-                        className={`time-slot group relative inset-0 transition-colors cursor-pointer ${
-                          isInSelection
-                            ? mouseDown?.button === 2
-                              ? 'bg-destructive/60'
-                              : 'bg-success/60'
-                            : slot
-                              ? slot.is_available
-                                ? 'bg-success/20 hover:bg-success/30'
-                                : 'bg-destructive/20 hover:bg-destructive/30'
-                              : 'hover:bg-secondary/10'
-                        }`}
-                      >
-                        <div className="absolute inset-0 p-1.5">
-                          {isInSelection && mouseDown?.button === 2 && slot && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-destructive/30">
-                              <CheckCircle2 className="w-4 h-4 text-destructive" />
-                            </div>
-                          )}
-                          {(!isInSelection || mouseDown?.button !== 2) && slot && (
-                            <>
-                              {slot.title && (
-                                <div className="flex items-center gap-1 text-[10px] font-medium bg-secondary/20 text-foreground px-1.5 py-0.5 rounded">
-                                  <Tag className="w-3 h-3" />
-                                  {slot.title}
-                                </div>
-                              )}
-                              {slot.notes && (
-                                <div className="absolute inset-x-1.5 bottom-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <div className="text-[10px] text-muted-foreground line-clamp-1">
-                                    {slot.notes}
-                                  </div>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
+                      <TimeSlotCell
+                        key={`${day}-${hour}`}
+                        day={day}
+                        hour={hour}
+                        slot={slot}
+                        isInSelection={isSlotInSelection(day, hour)}
+                        mouseDownButton={mouseDown?.button}
+                        date={weekDates[colIdx]}
+                      />
                     );
                   })}
                 </div>
