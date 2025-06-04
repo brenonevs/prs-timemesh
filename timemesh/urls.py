@@ -17,10 +17,56 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from django.http import HttpResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.middleware.csrf import get_token
+from django.http import JsonResponse
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def welcome_view(request):
+    """
+    View pública que retorna informações sobre a API
+    """
+    return Response({
+        "status": "online",
+        "message": "Bem-vindo à API do TimeMesh! 🚀",
+        "version": "1.0.0",
+        "auth": {
+            "instructions": "Para usar a API, primeiro obtenha um token JWT fazendo POST para /api/token/ com username e password",
+            "example": {
+                "request": {
+                    "method": "POST",
+                    "url": "/api/token/",
+                    "body": {
+                        "username": "seu_usuario",
+                        "password": "sua_senha"
+                    }
+                },
+                "response": {
+                    "access": "seu_token_jwt",
+                    "refresh": "seu_token_refresh"
+                }
+            }
+        },
+        "endpoints": {
+            "auth": {
+                "login": "/api/token/",
+                "refresh": "/api/token/refresh/"
+            },
+            "api": {
+                "availability": "/api/availability/",
+                "users": "/api/users/",
+                "groups": "/api/groups/",
+                "analytics": "/api/analytics/"
+            },
+            "admin": "/admin/"
+        }
+    })
 
 urlpatterns = [
-    path('', lambda request: HttpResponse("Bem-vindo ao TimeMesh! API e painel em construção 🚧")),
+    path('', welcome_view, name='welcome'),
     path('admin/', admin.site.urls),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
