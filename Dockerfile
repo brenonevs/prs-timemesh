@@ -11,7 +11,7 @@ COPY . .
 
 RUN chmod +x /app/start.sh
 
-EXPOSE 8000
+EXPOSE 8080
 
 CMD ["/app/start.sh"]
 
