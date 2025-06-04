@@ -1,33 +1,27 @@
 #!/bin/bash
 
-echo "Iniciando o servidor Django..."
+echo "Aguardando o banco de dados ficar pronto..."
+# Espera o banco responder na porta 5432
+until nc -z $DB_HOST $DB_PORT; do
+  echo "Banco ainda não está pronto. Tentando novamente em 2 segundos..."
+  sleep 2
+done
+echo "Banco está pronto!"
 
-PORT="${PORT:-8080}"
-echo "Servidor iniciando na porta $PORT"
+echo "Aplicando migrações..."
+python manage.py migrate --no-input
 
-# Setup e migrações em segundo plano
-(
-    until nc -z $DB_HOST $DB_PORT; do
-        echo "Esperando pelo banco de dados em $DB_HOST:$DB_PORT..."
-        sleep 2
-    done
-    echo "Banco de dados disponível!"
-
-    echo "Executando migrações..."
-    python manage.py migrate --no-input
-
-    echo "Criando superusuário (se necessário)..."
-    python manage.py shell -c "
-from django.contrib.auth import get_user_model
+echo "Verificando superusuário..."
+python manage.py shell -c "
+from django.contrib.auth import get_user_model;
+User = get_user_model();
 import os
-User = get_user_model()
 username = os.environ.get('DJANGO_SUPERUSER_USERNAME')
 email = os.environ.get('DJANGO_SUPERUSER_EMAIL')
 password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
-if username and email and password and not User.objects.filter(username=username).exists():
+if not User.objects.filter(username=username).exists():
     User.objects.create_superuser(username, email, password)
-"
-) &
+" && echo "Superusuário criado ou já existe."
 
 echo "Iniciando o servidor Django..."
 python manage.py runserver 0.0.0.0:8000
