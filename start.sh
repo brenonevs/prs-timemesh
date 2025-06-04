@@ -29,4 +29,5 @@ if username and email and password and not User.objects.filter(username=username
 "
 ) &
 
-exec gunicorn timemesh.wsgi:application --bind 0.0.0.0:$PORT
+echo "Iniciando o servidor Django..."
+python manage.py runserver 0.0.0.0:8000

@@ -12,7 +12,6 @@ COPY . .
 
 RUN chmod +x /app/start.sh
 
-ENV PORT=8080
-EXPOSE ${PORT}
+EXPOSE 8080
 
 CMD ["/app/start.sh"]
